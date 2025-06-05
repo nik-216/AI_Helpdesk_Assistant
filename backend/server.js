@@ -1,44 +1,59 @@
 const express = require('express');
 const cors = require('cors');
-const multer = require('multer');
-const { spawn } = require('child_process');
-const path = require('path');
+const pool = require('./database/db'); // Import the pool directly
+const authRoutes = require('./routes/auth');
+const uploadRoutes = require('./routes/upload');
 
 const app = express();
-const PORT = 8080;
 
+// Database initialization
+async function initializeDatabase() {
+  const client = await pool.connect(); // Use the imported pool directly
+  try {
+    // Create extension if not exists
+    await client.query('CREATE EXTENSION IF NOT EXISTS vector');
+    
+    // Create tables if not exists
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS web_embeddings (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        url TEXT,
+        chunk TEXT,
+        embedding vector(384),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    console.log('✅ Database tables initialized');
+  } catch (err) {
+    console.error('❌ Database initialization error:', err.message);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-const upload = multer({ dest: 'uploads/' });
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes);
 
-// Handle URL or file input and call Python script
-app.post('/process', upload.single('file'), (req, res) => {
-  const mode = req.body.mode;
-  const url = req.body.url;
-  const filePath = req.file?.path;
-
-  const args = [];
-  if (mode === 'url') {
-    args.push('--url', url);
-  } else if (mode === 'file') {
-    args.push('--file', filePath);
+// Start server
+async function startServer() {
+  try {
+    await initializeDatabase();
+    const PORT = process.env.PORT || 8080;
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('❌ Failed to start server:', err.message);
+    process.exit(1);
   }
+}
 
-  const py = spawn('python3', ['python/main.py', ...args]);
-
-  let data = '';
-  py.stdout.on('data', (chunk) => {
-    data += chunk.toString();
-  });
-
-  py.stderr.on('data', (err) => {
-    console.error('Error:', err.toString());
-  });
-
-  py.on('close', (code) => {
-    res.json({ output: data.trim(), code });
-  });
-});
-
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+startServer();
