@@ -50,10 +50,11 @@ const Home = () => {
       const formData = new FormData();
       formData.append('file', file);
       
+      const token = localStorage.getItem('token');
       const response = await axios.post('http://localhost:8080/api/upload/file', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}` // Make sure token is included
         }
       });
       

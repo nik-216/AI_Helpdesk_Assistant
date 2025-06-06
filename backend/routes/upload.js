@@ -9,59 +9,91 @@ const mammoth = require('mammoth');
 const { PythonShell } = require('python-shell');
 const authenticate = require('../middlewares/auth');
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ 
+  dest: 'uploads/',
+  fileFilter: (req, file, cb) => {
+    const validTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ];
+    if (validTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type'), false);
+    }
+  }
+});
 
 // Process file upload
-router.post('/file', upload.single('file'), async (req, res) => {
+router.post('/file', authenticate, upload.single('file'), async (req, res) => {
   try {
+    console.log('Authenticated user:', req.user); // Debug log
+    
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const text = await extractTextFromFile(req.file.path);
-    const result = await processAndStoreContent(req.user.id, req.file.originalname, text);
-    
+    // Now safely use req.user.id
+    console.log('Processing file:', req.file.originalname); // Debug log
+    console.log('File path:', req.file.path); // Debug log
+    const text = await extractTextFromFile(req.file.path, req.file.originalname);
+    const chunks = chunkText(text);
+    const embeddings = await generateEmbeddings(chunks);
+    await storeEmbeddings(req.user.id, req.file.originalname, chunks, embeddings);
+
     // Clean up uploaded file
     fs.unlinkSync(req.file.path);
     
     res.json({ 
       success: true, 
-      chunks: result.chunks,
+      chunks: chunks.length,
       source: req.file.originalname
     });
   } catch (error) {
+    if (req.file?.path) {
+      fs.unlinkSync(req.file.path);
+    }
     console.error('File processing error:', error);
-    res.status(500).json({ error: 'File processing failed' });
+    res.status(500).json({ error: error.message || 'File processing failed' });
   }
 });
 
 // Process URL
 router.post('/url', authenticate, async (req, res) => {
   try {
-    console.log('Authenticated user:', req.user); // Debug log
+    console.log('Database pool:', pool); // Debug log
     
     const { url } = req.body;
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
 
-    // Now safely use req.user.id
     const text = await scrapeText(url);
     const chunks = chunkText(text);
-    await storeEmbeddings(req.user.id, url, chunks);
+    const embeddings = await generateEmbeddings(chunks);
+    
+    console.log('Before storeEmbeddings'); // Debug log
+    await storeEmbeddings(req.user.id, url, chunks, embeddings);
+    console.log('After storeEmbeddings'); // Debug log
     
     res.json({ success: true, chunks: chunks.length });
   } catch (error) {
-    console.error('URL processing error:', error);
+    console.error('Full error:', error);
     res.status(500).json({ 
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      details: error.detail // For PostgreSQL errors
     });
   }
 });
 
 // Helper functions
 const extractTextFromFile = async (filePath, originalName) => {
+  if (!filePath || !originalName) {
+    throw new Error('File path and original name are required');
+  }
+
   const extension = path.extname(originalName).toLowerCase();
   
   try {
@@ -122,7 +154,7 @@ async function generateEmbeddings(chunks) {
 }
 
 async function storeEmbeddings(userId, source, chunks, embeddings) {
-  const client = await pool.connect();
+  const client = await pool.connect(); // Use the imported pool
   try {
     for (const { chunk, embedding } of embeddings) {
       await client.query(
@@ -131,6 +163,9 @@ async function storeEmbeddings(userId, source, chunks, embeddings) {
         [userId, source, chunk, JSON.stringify(embedding)]
       );
     }
+  } catch (err) {
+    console.error('Error storing embeddings:', err);
+    throw err; // Re-throw to handle in the route handler
   } finally {
     client.release();
   }

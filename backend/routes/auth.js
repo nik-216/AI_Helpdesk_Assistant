@@ -43,8 +43,10 @@ router.post('/signup', async (req, res) => {
     // Create token
     const token = jwt.sign(
       {
-        id: user.id,  // Make sure this is included
-        email: user.email
+        id: user.rows[0].id,
+        email: user.rows[0].email,
+        name: user.rows[0].name,
+        company: user.rows[0].company
       },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }

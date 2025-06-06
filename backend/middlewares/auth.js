@@ -14,7 +14,9 @@ module.exports = (req, res, next) => {
     // Attach user to request
     req.user = {
       id: decoded.id,
-      email: decoded.email
+      email: decoded.email,
+      name: decoded.name,
+      company: decoded.company
     };
     next();
   });

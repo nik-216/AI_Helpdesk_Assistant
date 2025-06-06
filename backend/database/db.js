@@ -22,4 +22,7 @@ pool.connect()
   });
 
 // Export the pool directly
-module.exports = pool;
+module.exports = {
+  pool,  // Export the pool directly
+  query: (text, params) => pool.query(text, params),
+};
