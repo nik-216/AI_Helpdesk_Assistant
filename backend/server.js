@@ -32,8 +32,8 @@ async function initializeDatabase() {
   try {
     await client.query('CREATE EXTENSION IF NOT EXISTS vector');
     await client.query(`
-      CREATE TABLE IF NOT EXISTS web_embeddings (
-        id SERIAL PRIMARY KEY,
+      CREATE TABLE IF NOT EXISTS knowledge_embeddings (
+        kb_id SERIAL PRIMARY KEY,
         user_id INTEGER,
         url TEXT,
         chunk TEXT,
@@ -41,6 +41,18 @@ async function initializeDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        user_id SERIAL PRIMARY KEY,
+        name VARCHAR(100),
+        email VARCHAR(100) UNIQUE,
+        password VARCHAR(255),
+        company VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     console.log('✅ Database tables initialized');
   } catch (err) {
     console.error('❌ Database initialization error:', err);

@@ -174,7 +174,7 @@ async function storeEmbeddings(userId, source, chunks, embeddings) {
   try {
     for (const { chunk, embedding } of embeddings) {
       await client.query(
-        `INSERT INTO web_embeddings (user_id, url, chunk, embedding)
+        `INSERT INTO knowledge_embeddings (user_id, url, chunk, embedding)
          VALUES ($1, $2, $3, $4)`,
         [userId, source, chunk, JSON.stringify(embedding)]
       );

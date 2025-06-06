@@ -31,7 +31,7 @@ cur = conn.cursor()
 # Ensure table exists with correct dimensions
 cur.execute("""
     CREATE EXTENSION IF NOT EXISTS vector;
-    CREATE TABLE IF NOT EXISTS web_embeddings (
+    CREATE TABLE IF NOT EXISTS knowledge_embeddings (
         id SERIAL PRIMARY KEY,
         url TEXT,
         chunk TEXT,
@@ -85,7 +85,7 @@ def insert_embeddings(url, chunk_embedding_pairs):
         # Convert to PostgreSQL vector format string
         vec_str = "[" + ",".join(map(str, embedding.tolist())) + "]"
         cur.execute(
-            "INSERT INTO web_embeddings (url, chunk, embedding) VALUES (%s, %s, %s::vector)",
+            "INSERT INTO knowledge_embeddings (url, chunk, embedding) VALUES (%s, %s, %s::vector)",
             (url, chunk, vec_str)
         )
     conn.commit()
@@ -96,7 +96,7 @@ def search_similar(query, top_k=5):
     
     cur.execute("""
         SELECT chunk, 1 - (embedding <=> %s::vector) AS cosine_similarity
-        FROM web_embeddings
+        FROM knowledge_embeddings
         ORDER BY embedding <=> %s::vector
         LIMIT %s
     """, (vec_str, vec_str, top_k))
