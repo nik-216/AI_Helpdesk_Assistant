@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { pool } = require('../database/db');
 const fs = require('fs');
 const path = require('path');
 const pdf = require('pdf-parse');
 const mammoth = require('mammoth');
 const { PythonShell } = require('python-shell');
+
+const { pool } = require('../database/db');
 const authenticate = require('../middlewares/auth');
+const { pipeline } = require('@xenova/transformers');
 
 const upload = multer({ 
   dest: 'uploads/',
@@ -62,7 +64,7 @@ router.post('/file', authenticate, upload.single('file'), async (req, res) => {
 // Process URL
 router.post('/url', authenticate, async (req, res) => {
   try {
-    console.log('Database pool:', pool); // Debug log
+    // console.log('Database pool:', pool); // Debug log
     
     const { url } = req.body;
     if (!url) {
@@ -145,12 +147,26 @@ function chunkText(text, maxWords = 100) {
   }, []).map(chunk => chunk.join(' '));
 }
 
+let embedder;
 async function generateEmbeddings(chunks) {
-  // In production, call your embedding service here
-  return chunks.map(chunk => ({
-    chunk,
-    embedding: Array(384).fill(0) // Placeholder
-  }));
+  try {
+    // Lazy load the model
+    if (!embedder) {
+      embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+    }
+    
+    const embeddings = await Promise.all(
+      chunks.map(chunk => embedder(chunk, { pooling: 'mean', normalize: true }))
+    );
+    
+    return chunks.map((chunk, index) => ({
+      chunk,
+      embedding: Array.from(embeddings[index].data)
+    }));
+  } catch (error) {
+    console.error('HuggingFace embedding error:', error);
+    throw new Error('Failed to generate embeddings');
+  }
 }
 
 async function storeEmbeddings(userId, source, chunks, embeddings) {
