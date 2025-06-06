@@ -1,16 +1,21 @@
+// middlewares/auth.js
 const jwt = require('jsonwebtoken');
 
-const authenticateToken = (req, res, next) => {
+module.exports = (req, res, next) => {
+  // Get token from Authorization header
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   
   if (!token) return res.sendStatus(401);
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) return res.sendStatus(403); // Invalid token
+    
+    // Attach user to request
+    req.user = {
+      id: decoded.id,
+      email: decoded.email
+    };
     next();
   });
 };
-
-module.exports = authenticateToken;

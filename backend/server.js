@@ -1,10 +1,38 @@
 const express = require('express');
 const cors = require('cors');
-const pool = require('./database/db'); // Import the pool directly
+const pool = require('./database/db');
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
+const multer = require('multer');
 
 const app = express();
+
+// Configure CORS properly
+app.use(cors({
+  origin: 'http://localhost:3000', // Your React app's origin
+  credentials: true
+}));
+
+// Middleware
+app.use(express.json());
+
+// File upload configuration
+const upload = multer({ dest: 'uploads/' });
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes); // This is your upload endpoint
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
+
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
 
 // Database initialization
 async function initializeDatabase() {
@@ -33,27 +61,3 @@ async function initializeDatabase() {
     client.release();
   }
 }
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/upload', uploadRoutes);
-
-// Start server
-async function startServer() {
-  try {
-    await initializeDatabase();
-    const PORT = process.env.PORT || 8080;
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  } catch (err) {
-    console.error('❌ Failed to start server:', err.message);
-    process.exit(1);
-  }
-}
-
-startServer();

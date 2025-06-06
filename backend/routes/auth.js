@@ -41,7 +41,14 @@ router.post('/signup', async (req, res) => {
     );
 
     // Create token
-    const token = jwt.sign({ id: newUser.rows[0].id }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(
+      {
+        id: user.id,  // Make sure this is included
+        email: user.email
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
     res.status(201).json({ token, user: newUser.rows[0] });
   } catch (err) {
@@ -68,7 +75,7 @@ router.post('/signin', async (req, res) => {
     }
 
     // Create token
-    const token = jwt.sign({ id: user.rows[0].id }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: user.rows[0].id, email: user.rows[0].email, name: user.rows[0].name, company: user.rows[0].company }, JWT_SECRET, { expiresIn: '1h' });
 
     res.json({ 
       token, 
@@ -88,6 +95,20 @@ router.post('/signin', async (req, res) => {
 // Protected route example
 router.get('/protected', authenticateToken, (req, res) => {
   res.json({ message: 'This is protected data', user: req.user });
+});
+
+// Add this to your auth router
+router.post('/verify', authenticateToken, (req, res) => {
+  // If middleware passes, token is valid
+  res.json({
+    valid: true,
+    user: req.user,
+    email: req.user.email,
+    id: req.user.id,
+    name: req.user.name,
+    company: req.user.company,
+    expiresAt: new Date(req.user.exp * 1000)
+  });
 });
 
 module.exports = router;

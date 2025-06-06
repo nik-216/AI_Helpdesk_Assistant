@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { useEffect } from 'react';
 
 const Home = () => {
   const { user, signout } = useAuth();
@@ -13,18 +14,29 @@ const Home = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState('');
   const [recentActivity, setRecentActivity] = useState([]);
+  const validFileTypes = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain'
+  ];
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      // Validate file type
-      const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
-      if (!validTypes.includes(selectedFile.type)) {
-        setMessage('Invalid file type. Please upload PDF, DOCX, or TXT files.');
-        return;
-      }
-      setFile(selectedFile);
+    if (!selectedFile) return;
+
+    // Check both extension and MIME type
+    const extension = selectedFile.name.split('.').pop().toLowerCase();
+    const isValidType = validFileTypes.includes(selectedFile.type) || 
+                      ['.pdf', '.docx', '.txt'].includes(`.${extension}`);
+
+    if (!isValidType) {
+      setMessage(`Unsupported file type. Please upload PDF, DOCX, or TXT files.`);
+      e.target.value = ''; // Clear the file input
+      return;
     }
+
+    setFile(selectedFile);
+    setMessage('');
   };
 
   const handleFileUpload = async (e) => {
@@ -38,7 +50,7 @@ const Home = () => {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await axios.post('/api/upload/file', formData, {
+      const response = await axios.post('http://localhost:8080/api/upload/file', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -67,21 +79,24 @@ const Home = () => {
     setMessage('Processing link...');
     
     try {
-      const response = await axios.post('/api/upload/url', { url: link }, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        'http://localhost:8080/api/upload/url', 
+        { url: link },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
-      });
+      );
       
-      setMessage(`Link processed successfully! ${response.data.chunks} chunks created.`);
-      setRecentActivity(prev => [
-        { type: 'link', url: link, date: new Date(), chunks: response.data.chunks },
-        ...prev.slice(0, 4)
-      ]);
+      setMessage(`Processed successfully! ${response.data.chunks} chunks created.`);
       setShowLinkModal(false);
       setLink('');
     } catch (error) {
-      setMessage(error.response?.data?.error || 'Link processing failed');
+      setMessage(error.response?.data?.error || 'URL processing failed');
+      console.error('Error details:', error.response?.data);
     } finally {
       setIsProcessing(false);
     }
@@ -90,6 +105,21 @@ const Home = () => {
   const formatDate = (date) => {
     return new Date(date).toLocaleString();
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    console.log('Current JWT Token:', token);
+    
+    // Optional: Decode and print the token payload
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('Decoded Token Payload:', payload);
+      } catch (e) {
+        console.log('Could not decode token:', e);
+      }
+    }
+  }, []);
 
   return (
     <div style={styles.container}>

@@ -7,6 +7,7 @@ const path = require('path');
 const pdf = require('pdf-parse');
 const mammoth = require('mammoth');
 const { PythonShell } = require('python-shell');
+const authenticate = require('../middlewares/auth');
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -35,43 +36,51 @@ router.post('/file', upload.single('file'), async (req, res) => {
 });
 
 // Process URL
-router.post('/url', async (req, res) => {
+router.post('/url', authenticate, async (req, res) => {
   try {
+    console.log('Authenticated user:', req.user); // Debug log
+    
     const { url } = req.body;
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
 
+    // Now safely use req.user.id
     const text = await scrapeText(url);
-    const result = await processAndStoreContent(req.user.id, url, text);
+    const chunks = chunkText(text);
+    await storeEmbeddings(req.user.id, url, chunks);
     
-    res.json({ 
-      success: true,
-      chunks: result.chunks,
-      source: url
-    });
+    res.json({ success: true, chunks: chunks.length });
   } catch (error) {
     console.error('URL processing error:', error);
-    res.status(500).json({ error: 'URL processing failed' });
+    res.status(500).json({ 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
 // Helper functions
-async function extractTextFromFile(filePath) {
-  const fileType = path.extname(filePath).toLowerCase();
-
-  if (fileType === '.pdf') {
-    const dataBuffer = fs.readFileSync(filePath);
-    const data = await pdf(dataBuffer);
-    return data.text;
-  } else if (fileType === '.docx') {
-    const result = await mammoth.extractRawText({ path: filePath });
-    return result.value;
-  } else if (fileType === '.txt') {
-    return fs.readFileSync(filePath, 'utf8');
+const extractTextFromFile = async (filePath, originalName) => {
+  const extension = path.extname(originalName).toLowerCase();
+  
+  try {
+    if (extension === '.pdf') {
+      const dataBuffer = fs.readFileSync(filePath);
+      const data = await pdf(dataBuffer);
+      return data.text;
+    } else if (extension === '.docx') {
+      const result = await mammoth.extractRawText({ path: filePath });
+      return result.value;
+    } else if (extension === '.txt') {
+      return fs.readFileSync(filePath, 'utf8');
+    }
+    throw new Error(`Unsupported file type: ${extension}`);
+  } catch (err) {
+    console.error(`Error processing ${originalName}:`, err);
+    throw new Error(`Failed to process ${originalName}: ${err.message}`);
   }
-  throw new Error('Unsupported file type');
-}
+};
 
 async function scrapeText(url) {
   const options = {
