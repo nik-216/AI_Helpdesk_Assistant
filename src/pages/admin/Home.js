@@ -1,35 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { useEffect } from 'react';
 
 const Home = () => {
   const { user, signout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [showNewChatbotModal, setShowNewChatbotModal] = useState(false);
   const [file, setFile] = useState(null);
   const [link, setLink] = useState('');
+  const [newChatbotName, setNewChatbotName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState('');
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [chatBots, setChatBots] = useState([]);
+  const [selectedChatbot, setSelectedChatbot] = useState(null);
+  const [chats, setChats] = useState([]);
+  const [knowledgeItems, setKnowledgeItems] = useState([]);
   const validFileTypes = [
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'text/plain'
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain'
   ];
 
+  // File type validation function
+  const isValidFileType = (file) => {
+    const validTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ];
+    const extension = file.name.split('.').pop().toLowerCase();
+    return validTypes.includes(file.type) || 
+           ['.pdf', '.docx', '.txt'].includes(`.${extension}`);
+  };
+
+  // Handle file selection
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
 
-    // Check both extension and MIME type
-    const extension = selectedFile.name.split('.').pop().toLowerCase();
-    const isValidType = validFileTypes.includes(selectedFile.type) || 
-                      ['.pdf', '.docx', '.txt'].includes(`.${extension}`);
-
-    if (!isValidType) {
+    if (!isValidFileType(selectedFile)) {
       setMessage(`Unsupported file type. Please upload PDF, DOCX, or TXT files.`);
       e.target.value = ''; // Clear the file input
       return;
@@ -39,9 +51,90 @@ const Home = () => {
     setMessage('');
   };
 
+  // Fetch all chat bots for the user
+  const fetchChatBots = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:8080/api/chatbots', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      setChatBots(response.data);
+    } catch (error) {
+      console.error('Error fetching chat bots:', error);
+    }
+  };
+
+  // Fetch chats for a specific chatbot
+  const fetchChats = async (chatbotId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:8080/api/chatbots/${chatbotId}/chats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      setChats(response.data);
+    } catch (error) {
+      console.error('Error fetching chats:', error);
+    }
+  };
+
+  // Fetch knowledge items for a specific chatbot
+  const fetchKnowledgeItems = async (chatbotId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:8080/api/chatbots/${chatbotId}/knowledge`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      setKnowledgeItems(response.data);
+    } catch (error) {
+      console.error('Error fetching knowledge items:', error);
+    }
+  };
+
+  // Handle chatbot selection
+  const handleChatbotSelect = (chatbot) => {
+    setSelectedChatbot(chatbot);
+    setActiveTab('chatbot');
+    fetchChats(chatbot.chat_bot_id);
+    fetchKnowledgeItems(chatbot.chat_bot_id);
+  };
+
+  // Create a new chatbot
+  const handleCreateChatbot = async (e) => {
+    e.preventDefault();
+    if (!newChatbotName) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        'http://localhost:8080/api/chatbots',
+        { name: newChatbotName },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      setMessage(`Chatbot "${newChatbotName}" created successfully!`);
+      setNewChatbotName('');
+      setShowNewChatbotModal(false);
+      fetchChatBots(); // Refresh the list
+    } catch (error) {
+      setMessage(error.response?.data?.error || 'Failed to create chatbot');
+    }
+  };
+
+  // Handle file upload for the selected chatbot
   const handleFileUpload = async (e) => {
     e.preventDefault();
-    if (!file) return;
+    if (!file || !selectedChatbot) return;
     
     setIsProcessing(true);
     setMessage('Processing document...');
@@ -49,22 +142,20 @@ const Home = () => {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('chatbotId', selectedChatbot.chat_bot_id);
       
       const token = localStorage.getItem('token');
       const response = await axios.post('http://localhost:8080/api/upload/file', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}` // Make sure token is included
+          'Authorization': `Bearer ${token}`
         }
       });
       
       setMessage(`Document processed successfully! ${response.data.chunks} chunks created.`);
-      setRecentActivity(prev => [
-        { type: 'file', name: file.name, date: new Date(), chunks: response.data.chunks },
-        ...prev.slice(0, 4)
-      ]);
       setShowUploadModal(false);
       setFile(null);
+      fetchKnowledgeItems(selectedChatbot.chat_bot_id); // Refresh knowledge items
     } catch (error) {
       setMessage(error.response?.data?.error || 'File upload failed');
     } finally {
@@ -72,9 +163,10 @@ const Home = () => {
     }
   };
 
+  // Handle link submission for the selected chatbot
   const handleLinkSubmit = async (e) => {
     e.preventDefault();
-    if (!link) return;
+    if (!link || !selectedChatbot) return;
     
     setIsProcessing(true);
     setMessage('Processing link...');
@@ -83,7 +175,10 @@ const Home = () => {
       const token = localStorage.getItem('token');
       const response = await axios.post(
         'http://localhost:8080/api/upload/url', 
-        { url: link },
+        { 
+          url: link,
+          chatbotId: selectedChatbot.chat_bot_id 
+        },
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -95,31 +190,22 @@ const Home = () => {
       setMessage(`Processed successfully! ${response.data.chunks} chunks created.`);
       setShowLinkModal(false);
       setLink('');
+      fetchKnowledgeItems(selectedChatbot.chat_bot_id); // Refresh knowledge items
     } catch (error) {
       setMessage(error.response?.data?.error || 'URL processing failed');
-      console.error('Error details:', error.response?.data);
     } finally {
       setIsProcessing(false);
     }
   };
 
+  // Format date helper function
   const formatDate = (date) => {
     return new Date(date).toLocaleString();
   };
 
+  // Initialize component
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    console.log('Current JWT Token:', token);
-    
-    // Optional: Decode and print the token payload
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('Decoded Token Payload:', payload);
-      } catch (e) {
-        console.log('Could not decode token:', e);
-      }
-    }
+    fetchChatBots();
   }, []);
 
   return (
@@ -136,7 +222,10 @@ const Home = () => {
             <li style={styles.navItem}>
               <Link 
                 to="#" 
-                onClick={() => setActiveTab('dashboard')}
+                onClick={() => {
+                  setActiveTab('dashboard');
+                  setSelectedChatbot(null);
+                }}
                 style={{
                   ...styles.navLink,
                   color: activeTab === 'dashboard' ? '#3498db' : '#ecf0f1',
@@ -146,22 +235,35 @@ const Home = () => {
                 Dashboard
               </Link>
             </li>
-            <li style={styles.navItem}>
-              <Link 
-                to="#" 
-                onClick={() => setShowUploadModal(true)}
-                style={styles.navLink}
-              >
-                Upload Document
-              </Link>
+            
+            {/* Chatbots section */}
+            <li style={styles.navSectionHeader}>
+              <span style={styles.sectionTitle}>Your Chatbots</span>
             </li>
+            {chatBots.map(chatbot => (
+              <li key={chatbot.chat_bot_id} style={styles.navItem}>
+                <Link 
+                  to="#" 
+                  onClick={() => handleChatbotSelect(chatbot)}
+                  style={{
+                    ...styles.navLink,
+                    color: selectedChatbot?.chat_bot_id === chatbot.chat_bot_id ? '#3498db' : '#ecf0f1',
+                    backgroundColor: selectedChatbot?.chat_bot_id === chatbot.chat_bot_id ? '#34495e' : 'transparent',
+                  }}
+                >
+                  {chatbot.name || `Chatbot ${chatbot.chat_bot_id}`}
+                </Link>
+              </li>
+            ))}
+            
+            {/* Add new chatbot button */}
             <li style={styles.navItem}>
               <Link 
                 to="#" 
-                onClick={() => setShowLinkModal(true)}
+                onClick={() => setShowNewChatbotModal(true)}
                 style={styles.navLink}
               >
-                Add Link
+                + New Chatbot
               </Link>
             </li>
           </ul>
@@ -179,35 +281,130 @@ const Home = () => {
 
       {/* Main Content */}
       <div style={styles.mainContent}>
-        <h1 style={styles.welcomeHeader}>Welcome, {user?.name}</h1>
-        <p style={styles.welcomeSubtext}>What would you like to do today?</p>
-
         {activeTab === 'dashboard' && (
-          <div style={styles.dashboardContent}>
-            <h2>Recent Activity</h2>
-            {recentActivity.length > 0 ? (
-              <ul style={styles.activityList}>
-                {recentActivity.map((activity, index) => (
-                  <li key={index} style={styles.activityItem}>
-                    <div style={styles.activityHeader}>
-                      <span style={styles.activityType}>
-                        {activity.type === 'file' ? '📄 Document' : '🔗 Link'}
-                      </span>
-                      <span style={styles.activityDate}>
-                        {formatDate(activity.date)}
-                      </span>
+          <>
+            <h1 style={styles.welcomeHeader}>Welcome, {user?.name}</h1>
+            <p style={styles.welcomeSubtext}>What would you like to do today?</p>
+            <div style={styles.dashboardContent}>
+              <h2>Your Chatbots</h2>
+              {chatBots.length > 0 ? (
+                <div style={styles.chatbotGrid}>
+                  {chatBots.map(chatbot => (
+                    <div 
+                      key={chatbot.chat_bot_id} 
+                      style={styles.chatbotCard}
+                      onClick={() => handleChatbotSelect(chatbot)}
+                    >
+                      <h3>{chatbot.name || `Chatbot ${chatbot.chat_bot_id}`}</h3>
+                      <p>Created: {formatDate(chatbot.created_at)}</p>
                     </div>
-                    <div style={styles.activityContent}>
-                      {activity.type === 'file' ? activity.name : activity.url}
-                    </div>
-                    <div style={styles.activityFooter}>
-                      {activity.chunks} chunks processed
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p style={styles.noActivity}>No recent activity</p>
+                  ))}
+                </div>
+              ) : (
+                <p style={styles.noActivity}>You don't have any chatbots yet. Create one to get started!</p>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab === 'chatbot' && selectedChatbot && (
+          <div>
+            <h1 style={styles.welcomeHeader}>
+              {selectedChatbot.name || `Chatbot ${selectedChatbot.chat_bot_id}`}
+            </h1>
+            
+            <div style={styles.tabContainer}>
+              <button 
+                onClick={() => setActiveTab('chatbot-chats')}
+                style={{
+                  ...styles.tabButton,
+                  backgroundColor: activeTab === 'chatbot-chats' ? '#3498db' : '#ecf0f1',
+                  color: activeTab === 'chatbot-chats' ? 'white' : '#2c3e50',
+                }}
+              >
+                Chats
+              </button>
+              <button 
+                onClick={() => setActiveTab('chatbot-knowledge')}
+                style={{
+                  ...styles.tabButton,
+                  backgroundColor: activeTab === 'chatbot-knowledge' ? '#3498db' : '#ecf0f1',
+                  color: activeTab === 'chatbot-knowledge' ? 'white' : '#2c3e50',
+                }}
+              >
+                Knowledge Base
+              </button>
+            </div>
+
+            {activeTab === 'chatbot-chats' && (
+              <div style={styles.chatbotContent}>
+                <h2>Chats</h2>
+                {chats.length > 0 ? (
+                  <ul style={styles.chatList}>
+                    {chats.map(chat => (
+                      <li key={chat.chat_id} style={styles.chatItem}>
+                        <div style={styles.chatHeader}>
+                          <span style={styles.chatDate}>{formatDate(chat.created_at)}</span>
+                        </div>
+                        <div style={styles.chatActions}>
+                          <button style={styles.chatButton}>View</button>
+                          <button style={styles.chatButton}>Delete</button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={styles.noActivity}>No chats yet for this chatbot</p>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'chatbot-knowledge' && (
+              <div style={styles.chatbotContent}>
+                <div style={styles.knowledgeHeader}>
+                  <h2>Knowledge Base</h2>
+                  <div>
+                    <button 
+                      onClick={() => setShowUploadModal(true)}
+                      style={styles.smallButton}
+                    >
+                      Upload Document
+                    </button>
+                    <button 
+                      onClick={() => setShowLinkModal(true)}
+                      style={styles.smallButton}
+                    >
+                      Add Link
+                    </button>
+                  </div>
+                </div>
+                
+                {knowledgeItems.length > 0 ? (
+                  <ul style={styles.knowledgeList}>
+                    {knowledgeItems.map(item => (
+                      <li key={item.kb_id} style={styles.knowledgeItem}>
+                        <div style={styles.knowledgeHeader}>
+                          <span style={styles.knowledgeType}>
+                            {item.url ? '🔗 Link' : '📄 Document'}
+                          </span>
+                          <span style={styles.knowledgeDate}>
+                            {formatDate(item.created_at)}
+                          </span>
+                        </div>
+                        <div style={styles.knowledgeContent}>
+                          {item.url || 'Document content'}
+                        </div>
+                        <div style={styles.knowledgeFooter}>
+                          <button style={styles.smallButton}>View</button>
+                          <button style={styles.smallButton}>Delete</button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={styles.noActivity}>No knowledge items yet. Add some to train your chatbot!</p>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -290,6 +487,43 @@ const Home = () => {
         </div>
       )}
 
+      {/* New Chatbot Modal */}
+      {showNewChatbotModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <h2>Create New Chatbot</h2>
+            <form onSubmit={handleCreateChatbot}>
+              <div style={styles.formGroup}>
+                <label style={styles.inputLabel}>Chatbot Name:</label>
+                <input
+                  type="text"
+                  value={newChatbotName}
+                  onChange={(e) => setNewChatbotName(e.target.value)}
+                  style={styles.textInput}
+                  required
+                  placeholder="My Awesome Chatbot"
+                />
+              </div>
+              <div style={styles.modalButtons}>
+                <button 
+                  type="button"
+                  onClick={() => setShowNewChatbotModal(false)}
+                  style={styles.cancelButton}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  style={styles.uploadButton}
+                >
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Message notification */}
       {message && (
         <div style={{
@@ -303,7 +537,7 @@ const Home = () => {
   );
 };
 
-// Styles
+// Updated Styles
 const styles = {
   container: {
     display: 'flex',
@@ -335,10 +569,22 @@ const styles = {
   navList: {
     listStyle: 'none',
     padding: 0,
-    margin: 0
+    margin: 0,
+    overflowY: 'auto',
+    flexGrow: 1
+  },
+  navSectionHeader: {
+    margin: '20px 0 10px 0',
+    padding: '0 8px'
+  },
+  sectionTitle: {
+    color: '#bdc3c7',
+    fontSize: '12px',
+    textTransform: 'uppercase',
+    letterSpacing: '1px'
   },
   navItem: {
-    marginBottom: '15px'
+    marginBottom: '8px'
   },
   navLink: {
     color: '#ecf0f1',
@@ -370,7 +616,8 @@ const styles = {
   mainContent: {
     flex: 1,
     padding: '30px',
-    backgroundColor: 'white'
+    backgroundColor: 'white',
+    overflowY: 'auto'
   },
   welcomeHeader: {
     color: '#2c3e50',
@@ -383,37 +630,108 @@ const styles = {
   dashboardContent: {
     marginTop: '20px'
   },
-  activityList: {
+  chatbotGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+    gap: '20px',
+    marginTop: '20px'
+  },
+  chatbotCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: '8px',
+    padding: '20px',
+    border: '1px solid #eee',
+    cursor: 'pointer',
+    transition: 'all 0.3s',
+    ':hover': {
+      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+      transform: 'translateY(-2px)'
+    }
+  },
+  tabContainer: {
+    display: 'flex',
+    marginBottom: '20px',
+    borderBottom: '1px solid #eee'
+  },
+  tabButton: {
+    padding: '10px 20px',
+    border: 'none',
+    cursor: 'pointer',
+    borderRadius: '4px 4px 0 0',
+    marginRight: '5px',
+    transition: 'all 0.3s'
+  },
+  chatbotContent: {
+    marginTop: '20px'
+  },
+  chatList: {
     listStyle: 'none',
     padding: 0
   },
-  activityItem: {
+  chatItem: {
     backgroundColor: '#f9f9f9',
     borderRadius: '8px',
     padding: '15px',
     marginBottom: '15px',
     border: '1px solid #eee'
   },
-  activityHeader: {
+  chatHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     marginBottom: '10px'
   },
-  activityType: {
-    fontWeight: 'bold',
-    color: '#2c3e50'
-  },
-  activityDate: {
+  chatDate: {
     color: '#7f8c8d',
     fontSize: '0.9em'
   },
-  activityContent: {
-    marginBottom: '10px',
+  chatActions: {
+    display: 'flex',
+    gap: '10px'
+  },
+  knowledgeHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px'
+  },
+  knowledgeList: {
+    listStyle: 'none',
+    padding: 0
+  },
+  knowledgeItem: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: '8px',
+    padding: '15px',
+    marginBottom: '15px',
+    border: '1px solid #eee'
+  },
+  knowledgeType: {
+    fontWeight: 'bold',
+    color: '#2c3e50'
+  },
+  knowledgeDate: {
+    color: '#7f8c8d',
+    fontSize: '0.9em'
+  },
+  knowledgeContent: {
+    margin: '10px 0',
     color: '#34495e'
   },
-  activityFooter: {
-    fontSize: '0.8em',
-    color: '#7f8c8d'
+  knowledgeFooter: {
+    display: 'flex',
+    gap: '10px'
+  },
+  smallButton: {
+    padding: '5px 10px',
+    backgroundColor: '#3498db',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    ':hover': {
+      backgroundColor: '#2980b9'
+    }
   },
   noActivity: {
     color: '#7f8c8d',

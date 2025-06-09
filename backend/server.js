@@ -1,11 +1,10 @@
 const express = require('express');
 const cors = require('cors');
-const { pool } = require('./database/db'); // This should be the pool instance
+const { pool } = require('./database/db');
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
+const chatbotRoutes = require('./routes/chatbots'); // New route for chatbots
 const multer = require('multer');
-
-// console.log('Pool object:', pool);
 
 const app = express();
 
@@ -19,6 +18,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/chatbots', chatbotRoutes); // Add the new chatbots route
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -28,20 +28,12 @@ app.use((err, req, res, next) => {
 
 // Database initialization
 async function initializeDatabase() {
-  const client = await pool.connect(); // Now using the exported pool
+  const client = await pool.connect();
   try {
+    // Create vector extension if not exists
     await client.query('CREATE EXTENSION IF NOT EXISTS vector');
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS knowledge_embeddings (
-        kb_id SERIAL PRIMARY KEY,
-        user_id INTEGER,
-        url TEXT,
-        chunk TEXT,
-        embedding vector(384),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
 
+    // Create tables in the correct order to handle foreign key dependencies
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         user_id SERIAL PRIMARY KEY,
@@ -50,6 +42,50 @@ async function initializeDatabase() {
         password VARCHAR(255),
         company VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS chat_bots (
+        chat_bot_id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        name VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS chats (
+        chat_id SERIAL PRIMARY KEY,
+        chat_bot_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (chat_bot_id) REFERENCES chat_bots(chat_bot_id) ON DELETE CASCADE
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS knowledge_embeddings (
+        kb_id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        chat_bot_id INTEGER,
+        url TEXT,
+        chunk TEXT,
+        embedding vector(384),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (chat_bot_id) REFERENCES chat_bots(chat_bot_id) ON DELETE CASCADE
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS chat_history (
+        chat_history_id SERIAL PRIMARY KEY,
+        chat_id INTEGER,
+        message TEXT,
+        response TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE
       );
     `);
 

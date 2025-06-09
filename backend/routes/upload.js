@@ -36,13 +36,13 @@ router.post('/file', authenticate, upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Now safely use req.user.id
+    // Now safely use req.user.user_id
     console.log('Processing file:', req.file.originalname); // Debug log
     console.log('File path:', req.file.path); // Debug log
     const text = await extractTextFromFile(req.file.path, req.file.originalname);
     const chunks = chunkText(text);
     const embeddings = await generateEmbeddings(chunks);
-    await storeEmbeddings(req.user.id, req.file.originalname, chunks, embeddings);
+    await storeEmbeddings(req.user.user_id, req.file.originalname, chunks, embeddings);
 
     // Clean up uploaded file
     fs.unlinkSync(req.file.path);
@@ -76,7 +76,7 @@ router.post('/url', authenticate, async (req, res) => {
     const embeddings = await generateEmbeddings(chunks);
     
     console.log('Before storeEmbeddings'); // Debug log
-    await storeEmbeddings(req.user.id, url, chunks, embeddings);
+    await storeEmbeddings(req.user.user_id, url, chunks, embeddings);
     console.log('After storeEmbeddings'); // Debug log
     
     res.json({ success: true, chunks: chunks.length });

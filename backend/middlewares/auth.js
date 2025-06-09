@@ -13,7 +13,7 @@ module.exports = (req, res, next) => {
     
     // Attach user to request
     req.user = {
-      id: decoded.id,
+      user_id: decoded.user_id,
       email: decoded.email,
       name: decoded.name,
       company: decoded.company

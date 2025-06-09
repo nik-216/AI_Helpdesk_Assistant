@@ -3,22 +3,9 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database/db');
+const authenticateToken = require('../middlewares/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-// Middleware for authenticating tokens
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  
-  if (!token) return res.sendStatus(401);
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
-  });
-};
 
 // Signup endpoint
 router.post('/signup', async (req, res) => {
@@ -43,7 +30,7 @@ router.post('/signup', async (req, res) => {
     // Create token
     const token = jwt.sign(
       {
-        id: user.rows[0].id,
+        user_id: user.rows[0].user_id,
         email: user.rows[0].email,
         name: user.rows[0].name,
         company: user.rows[0].company
@@ -77,12 +64,12 @@ router.post('/signin', async (req, res) => {
     }
 
     // Create token
-    const token = jwt.sign({ id: user.rows[0].id, email: user.rows[0].email, name: user.rows[0].name, company: user.rows[0].company }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ user_id: user.rows[0].user_id, email: user.rows[0].email, name: user.rows[0].name, company: user.rows[0].company }, JWT_SECRET, { expiresIn: '1h' });
 
     res.json({ 
       token, 
       user: {
-        id: user.rows[0].id,
+        user_id: user.rows[0].user_id,
         name: user.rows[0].name,
         email: user.rows[0].email,
         company: user.rows[0].company
@@ -106,7 +93,7 @@ router.post('/verify', authenticateToken, (req, res) => {
     valid: true,
     user: req.user,
     email: req.user.email,
-    id: req.user.id,
+    user_id: req.user.user_id,
     name: req.user.name,
     company: req.user.company,
     expiresAt: new Date(req.user.exp * 1000)
