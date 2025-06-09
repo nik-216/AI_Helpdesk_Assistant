@@ -16,6 +16,7 @@ const SignUp = () => {
     setError('');
     try {
       await signup(name, email, password, company);
+      navigate('/home');
     } catch (err) {
       setError('Failed to create an account');
     }
