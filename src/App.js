@@ -3,7 +3,7 @@ import { AuthProvider } from './pages/auth/AuthContext';
 import SignUp from './pages/auth/SignUp';
 import SignIn from './pages/auth/SignIn';
 import Home from './pages/admin/Home';
-import ChatbotPage from './pages/admin/components/chatbot'
+import ChatbotPage from './pages/admin/components/ChatbotPage/ChatbotPage'
 
 function App() {
   return (

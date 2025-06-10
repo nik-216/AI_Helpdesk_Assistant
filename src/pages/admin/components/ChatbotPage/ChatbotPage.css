@@ -1,11 +1,13 @@
 .chatbot-page {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 20px;
 }
 
 .chatbot-title {
   color: #2c3e50;
   margin-bottom: 20px;
+  font-size: 1.8rem;
 }
 
 .tab-container {
@@ -22,6 +24,7 @@
   font-size: 1rem;
   color: #7f8c8d;
   transition: all 0.3s;
+  position: relative;
 }
 
 .tab-button:hover {
@@ -30,12 +33,21 @@
 
 .tab-button.active {
   color: #3498db;
-  border-bottom: 2px solid #3498db;
+  font-weight: 500;
 }
 
-.chats-section,
+.tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #3498db;
+}
+
 .knowledge-section {
-  margin-top: 20px;
+  margin-top: 30px;
 }
 
 .section-header {
@@ -43,6 +55,13 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: #2c3e50;
 }
 
 .action-buttons {
@@ -58,25 +77,161 @@
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s;
+  font-size: 0.9rem;
 }
 
 .primary-button:hover {
   background-color: #2980b9;
 }
 
-.chat-list,
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 25px;
+  border-radius: 8px;
+  width: 450px;
+  max-width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+}
+
+.file-types {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.file-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.selected-file {
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+
+.input-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.text-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cancel-button,
+.upload-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s;
+}
+
+.cancel-button {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.cancel-button:hover {
+  background-color: #7f8c8d;
+}
+
+.upload-button {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.upload-button:hover {
+  background-color: #27ae60;
+}
+
+.upload-button:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+}
+
+/* Notification Styles */
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 24px;
+  color: white;
+  border-radius: 4px;
+  z-index: 1000;
+  animation: fadeIn 0.3s;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Knowledge Items List */
 .knowledge-list {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
-.chat-item,
 .knowledge-item {
   background-color: #f9f9f9;
   border-radius: 8px;
   padding: 15px;
   margin-bottom: 15px;
   border: 1px solid #eee;
+  transition: all 0.3s;
+}
+
+.knowledge-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .item-header {
@@ -88,20 +243,20 @@
 .item-type {
   font-weight: bold;
   color: #2c3e50;
+  font-size: 0.9rem;
 }
 
-.item-date,
-.chat-date {
+.item-date {
   color: #7f8c8d;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 
 .item-content {
   margin: 10px 0;
   color: #34495e;
+  font-size: 0.9rem;
 }
 
-.chat-actions,
 .item-actions {
   display: flex;
   gap: 10px;
@@ -114,6 +269,7 @@
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s;
+  font-size: 0.8rem;
 }
 
 .action-button:hover {
@@ -133,5 +289,8 @@
   color: #7f8c8d;
   font-style: italic;
   text-align: center;
-  padding: 20px;
+  padding: 40px 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #ddd;
 }

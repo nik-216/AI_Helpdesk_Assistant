@@ -46,10 +46,19 @@ async function initializeDatabase() {
     `);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS client (
+        client_id SERIAL PRIMARY KEY,
+        name VARCHAR(100)
+      );
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS chat_bots (
         chat_bot_id SERIAL PRIMARY KEY,
         user_id INTEGER,
         name VARCHAR(100),
+        persistent BOOLEAN DEFAULT FALSE,
+        llm_model VARCHAR(100) DEFAULT 'gpt-3.5-turbo',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
       );
@@ -59,8 +68,10 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS chats (
         chat_id SERIAL PRIMARY KEY,
         chat_bot_id INTEGER,
+        client_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (chat_bot_id) REFERENCES chat_bots(chat_bot_id) ON DELETE CASCADE
+        FOREIGN KEY (chat_bot_id) REFERENCES chat_bots(chat_bot_id) ON DELETE CASCADE,
+        FOREIGN KEY (client_id) REFERENCES client(client_id) ON DELETE CASCADE
       );
     `);
 

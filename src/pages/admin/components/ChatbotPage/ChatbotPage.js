@@ -1,45 +1,102 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import './ChatbotPage.css';
 
 const ChatbotPage = ({ selectedChatbot, setActiveTab }) => {
-  const [activeSubTab, setActiveSubTab] = useState('chats');
-  const [chats, setChats] = useState([]);
-  const [knowledgeItems, setKnowledgeItems] = useState([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [file, setFile] = useState(null);
+  const [link, setLink] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [message, setMessage] = useState('');
+  const validFileTypes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain'
+  ];
 
-  const fetchChats = async () => {
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
+    const extension = selectedFile.name.split('.').pop().toLowerCase();
+    const isValidType = validFileTypes.includes(selectedFile.type) || 
+                      ['.pdf', '.docx', '.txt'].includes(`.${extension}`);
+
+    if (!isValidType) {
+      setMessage(`Unsupported file type. Please upload PDF, DOCX, or TXT files.`);
+      e.target.value = '';
+      return;
+    }
+
+    setFile(selectedFile);
+    setMessage('');
+  };
+
+  const handleFileUpload = async (e) => {
+    e.preventDefault();
+    if (!file || !selectedChatbot) return;
+    
+    setIsProcessing(true);
+    setMessage('Processing document...');
+    
     try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('chatbotId', selectedChatbot.chat_bot_id);
+      
       const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/chats`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      setChats(response.data);
+      const response = await axios.post('http://localhost:8080/api/upload/file', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      setMessage(`Document processed successfully! ${response.data.chunks} chunks created.`);
+      setShowUploadModal(false);
+      setFile(null);
+      // You might want to refresh knowledge items here
     } catch (error) {
-      console.error('Error fetching chats:', error);
+      setMessage(error.response?.data?.error || 'File upload failed');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const fetchKnowledgeItems = async () => {
+  const handleLinkSubmit = async (e) => {
+    e.preventDefault();
+    if (!link || !selectedChatbot) return;
+    
+    setIsProcessing(true);
+    setMessage('Processing link...');
+    
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/knowledge`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
+      const response = await axios.post(
+        'http://localhost:8080/api/upload/url', 
+        { 
+          url: link,
+          chatbotId: selectedChatbot.chat_bot_id 
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
       );
-      setKnowledgeItems(response.data);
+      
+      setMessage(`Processed successfully! ${response.data.chunks} chunks created.`);
+      setShowLinkModal(false);
+      setLink('');
+      // You might want to refresh knowledge items here
     } catch (error) {
-      console.error('Error fetching knowledge items:', error);
+      setMessage(error.response?.data?.error || 'URL processing failed');
+    } finally {
+      setIsProcessing(false);
     }
   };
-
-  useEffect(() => {
-    if (activeSubTab === 'chats') {
-      fetchChats();
-    } else {
-      fetchKnowledgeItems();
-    }
-  }, [activeSubTab, selectedChatbot]);
 
   return (
     <div className="chatbot-page">
@@ -49,79 +106,124 @@ const ChatbotPage = ({ selectedChatbot, setActiveTab }) => {
       
       <div className="tab-container">
         <button
-          onClick={() => setActiveSubTab('chats')}
-          className={`tab-button ${activeSubTab === 'chats' ? 'active' : ''}`}
+          className="tab-button"
+          onClick={() => setActiveTab('chatbot-chats')}
         >
           Chats
         </button>
         <button
-          onClick={() => setActiveSubTab('knowledge')}
-          className={`tab-button ${activeSubTab === 'knowledge' ? 'active' : ''}`}
+          className="tab-button active"
+          onClick={() => setActiveTab('chatbot-knowledge')}
         >
           Knowledge Base
         </button>
       </div>
 
-      {activeSubTab === 'chats' && (
-        <div className="chats-section">
-          <h2>Chat History</h2>
-          {chats.length > 0 ? (
-            <ul className="chat-list">
-              {chats.map(chat => (
-                <li key={chat.chat_id} className="chat-item">
-                  <div className="chat-header">
-                    <span className="chat-date">
-                      {new Date(chat.created_at).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="chat-actions">
-                    <button className="action-button">View</button>
-                    <button className="action-button delete">Delete</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="no-data">No chats yet for this chatbot</p>
-          )}
+      <div className="knowledge-section">
+        <div className="section-header">
+          <h2>Knowledge Base</h2>
+          <div className="action-buttons">
+            <button 
+              className="primary-button"
+              onClick={() => setShowUploadModal(true)}
+            >
+              Upload Document
+            </button>
+            <button 
+              className="primary-button"
+              onClick={() => setShowLinkModal(true)}
+            >
+              Add Link
+            </button>
+          </div>
+        </div>
+        
+        {/* Knowledge items list would go here */}
+      </div>
+
+      {/* Upload Document Modal */}
+      {showUploadModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Upload Document</h2>
+            <p className="file-types">Supported formats: PDF, DOCX, TXT</p>
+            <input 
+              type="file" 
+              onChange={handleFileChange}
+              className="file-input"
+              accept=".pdf,.docx,.txt"
+            />
+            {file && (
+              <p className="selected-file">Selected: {file.name}</p>
+            )}
+            <div className="modal-actions">
+              <button 
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setFile(null);
+                }}
+                className="cancel-button"
+                disabled={isProcessing}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleFileUpload}
+                className="upload-button"
+                disabled={!file || isProcessing}
+              >
+                {isProcessing ? 'Processing...' : 'Upload'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {activeSubTab === 'knowledge' && (
-        <div className="knowledge-section">
-          <div className="section-header">
-            <h2>Knowledge Base</h2>
-            <div className="action-buttons">
-              <button className="primary-button">Upload Document</button>
-              <button className="primary-button">Add Link</button>
-            </div>
+      {/* Add Link Modal */}
+      {showLinkModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Add Link</h2>
+            <form onSubmit={handleLinkSubmit}>
+              <div className="form-group">
+                <label className="input-label">Link URL:</label>
+                <input
+                  type="url"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  className="text-input"
+                  required
+                  placeholder="https://example.com"
+                />
+              </div>
+              <div className="modal-actions">
+                <button 
+                  type="button"
+                  onClick={() => setShowLinkModal(false)}
+                  className="cancel-button"
+                  disabled={isProcessing}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="upload-button"
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? 'Processing...' : 'Add Link'}
+                </button>
+              </div>
+            </form>
           </div>
-          
-          {knowledgeItems.length > 0 ? (
-            <ul className="knowledge-list">
-              {knowledgeItems.map(item => (
-                <li key={item.kb_id} className="knowledge-item">
-                  <div className="item-header">
-                    <span className="item-type">
-                      {item.url ? '🔗 Link' : '📄 Document'}
-                    </span>
-                    <span className="item-date">
-                      {new Date(item.created_at).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="item-content">
-                    {item.url || 'Document content'}
-                  </div>
-                  <div className="item-actions">
-                    <button className="action-button">View</button>
-                    <button className="action-button delete">Delete</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="no-data">No knowledge items yet</p>
-          )}
+        </div>
+      )}
+
+      {/* Message notification */}
+      {message && (
+        <div className="notification" style={{
+          backgroundColor: message.includes('failed') ? '#e74c3c' : '#2ecc71'
+        }}>
+          {message}
         </div>
       )}
     </div>
