@@ -5,7 +5,7 @@
 }
 
 .chatbot-title {
-  color: #2c3e50;
+  color: #2a1b3d;
   margin-bottom: 20px;
   font-size: 1.8rem;
 }
@@ -28,11 +28,11 @@
 }
 
 .tab-button:hover {
-  color: #2c3e50;
+  color: #2a1b3d;
 }
 
 .tab-button.active {
-  color: #3498db;
+  color: #563e76;
   font-weight: 500;
 }
 
@@ -43,7 +43,7 @@
   left: 0;
   width: 100%;
   height: 2px;
-  background-color: #3498db;
+  background-color: #2a1b3d;
 }
 
 .knowledge-section {
@@ -71,7 +71,7 @@
 
 .primary-button {
   padding: 8px 16px;
-  background-color: #3498db;
+  background-color: #34b4db;
   color: white;
   border: none;
   border-radius: 4px;
@@ -242,7 +242,7 @@
 
 .item-type {
   font-weight: bold;
-  color: #2c3e50;
+  color: #2a1b3d;
   font-size: 0.9rem;
 }
 
@@ -253,7 +253,7 @@
 
 .item-content {
   margin: 10px 0;
-  color: #34495e;
+  color: #34b4db;
   font-size: 0.9rem;
 }
 
@@ -317,7 +317,7 @@
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
-  color: #2c3e50;
+  color: #2a1b3d;
 }
 
 .settings-form input[type="checkbox"] {
@@ -356,7 +356,7 @@
 
 .edit-button {
   padding: 10px 20px;
-  background-color: #3498db;
+  background-color: #34b4db;
   color: white;
   border: none;
   border-radius: 4px;

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
+import './Auth.css'
 
 const SignUp = () => {
   const [name, setName] = useState('');
@@ -22,90 +23,47 @@ const SignUp = () => {
   };
 
   return (
-    <div style={styles.container}>
+    <div className='container'>
       <h2>Sign Up</h2>
-      {error && <p style={styles.error}>{error}</p>}
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <div style={styles.formGroup}>
+      {error && <p className='error'>{error}</p>}
+      <form onSubmit={handleSubmit} className='form'>
+        <div className='formGroup'>
           <label>Name:</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            style={styles.input}
+            className='input'
           />
         </div>
-        <div style={styles.formGroup}>
+        <div className='formGroup'>
           <label>Email:</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={styles.input}
+            className='input'
           />
         </div>
-        <div style={styles.formGroup}>
+        <div className='formGroup'>
           <label>Password:</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={styles.input}
+            className='input'
           />
         </div>
-        <button type="submit" style={styles.button}>Sign Up</button>
+        <button type="submit" className='button'>Sign Up</button>
       </form>
       <p>
-        Already have an account? <span style={styles.link} onClick={() => navigate('/signin')}>Sign In</span>
+        Already have an account? <span className='link' onClick={() => navigate('/signin')}>Sign In</span>
       </p>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    maxWidth: '400px',
-    margin: '0 auto',
-    padding: '20px',
-    border: '1px solid #ddd',
-    borderRadius: '5px',
-    marginTop: '50px',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  formGroup: {
-    marginBottom: '15px',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  input: {
-    padding: '8px',
-    fontSize: '16px',
-    marginTop: '5px',
-  },
-  button: {
-    padding: '10px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    fontSize: '16px',
-  },
-  error: {
-    color: 'red',
-    marginBottom: '15px',
-  },
-  link: {
-    color: '#007bff',
-    cursor: 'pointer',
-    textDecoration: 'underline',
-  },
 };
 
 export default SignUp;
