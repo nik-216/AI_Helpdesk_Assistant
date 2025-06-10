@@ -81,6 +81,8 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
             </Link>
             </li>
 
+            <hr></hr>
+
             <li className='navSectionHeader'>
                 <span className='sectionTitle'>Your Chatbots</span>
             </li>
@@ -106,6 +108,8 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
                 + New Chatbot
               </Link>
             </li>
+
+            <hr></hr>
             
         </ul>
         </nav>
