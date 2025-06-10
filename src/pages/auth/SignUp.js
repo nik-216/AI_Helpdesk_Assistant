@@ -6,7 +6,6 @@ const SignUp = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [company, setCompany] = useState('');
   const [error, setError] = useState('');
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -15,7 +14,7 @@ const SignUp = () => {
     e.preventDefault();
     setError('');
     try {
-      await signup(name, email, password, company);
+      await signup(name, email, password);
       navigate('/home');
     } catch (err) {
       setError('Failed to create an account');
@@ -53,16 +52,6 @@ const SignUp = () => {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required
-            style={styles.input}
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label>Company:</label>
-          <input
-            type="text"
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
             required
             style={styles.input}
           />

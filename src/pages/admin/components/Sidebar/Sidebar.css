@@ -136,7 +136,7 @@
     color: white;
     border-radius: 4px;
     z-index: 1000;
-    animation: fadeInOut 100s ease-in-out;
+    animation: fadeInOut 10000s ease-in-out;
     opacity: 0;
 }
 

@@ -9,7 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Signup endpoint
 router.post('/signup', async (req, res) => {
-  const { email, password, name, company } = req.body;
+  const { email, password, name} = req.body;
 
   try {
     // Check if user exists
@@ -23,17 +23,16 @@ router.post('/signup', async (req, res) => {
 
     // Create user
     const newUser = await db.query(
-      'INSERT INTO users (name, email, password, company) VALUES ($1, $2, $3, $4) RETURNING id, email, name',
-      [name, email, hashedPassword, company]
+      'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING user_id, email, name',
+      [name, email, hashedPassword]
     );
 
     // Create token
     const token = jwt.sign(
       {
-        user_id: user.rows[0].user_id,
-        email: user.rows[0].email,
-        name: user.rows[0].name,
-        company: user.rows[0].company
+        user_id: newUser.rows[0].user_id,
+        email: newUser.rows[0].email,
+        name: newUser.rows[0].name
       },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
@@ -64,15 +63,14 @@ router.post('/signin', async (req, res) => {
     }
 
     // Create token
-    const token = jwt.sign({ user_id: user.rows[0].user_id, email: user.rows[0].email, name: user.rows[0].name, company: user.rows[0].company }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ user_id: user.rows[0].user_id, email: user.rows[0].email, name: user.rows[0].name}, JWT_SECRET, { expiresIn: '1h' });
 
     res.json({ 
       token, 
       user: {
         user_id: user.rows[0].user_id,
         name: user.rows[0].name,
-        email: user.rows[0].email,
-        company: user.rows[0].company
+        email: user.rows[0].email
       }
     });
   } catch (err) {
@@ -95,7 +93,6 @@ router.post('/verify', authenticateToken, (req, res) => {
     email: req.user.email,
     user_id: req.user.user_id,
     name: req.user.name,
-    company: req.user.company,
     expiresAt: new Date(req.user.exp * 1000)
   });
 });

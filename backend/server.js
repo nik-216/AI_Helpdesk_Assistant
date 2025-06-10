@@ -3,7 +3,8 @@ const cors = require('cors');
 const { pool } = require('./database/db');
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
-const chatbotRoutes = require('./routes/chatbots'); // New route for chatbots
+const chatbotRoutes = require('./routes/chatbots'); 
+const chatRoutes = require('./routes/chats');
 const multer = require('multer');
 
 const app = express();
@@ -18,7 +19,8 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/chatbots', chatbotRoutes); // Add the new chatbots route
+app.use('/api/chatbots', chatbotRoutes); 
+// app.use('/api/chats', chatRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -40,7 +42,6 @@ async function initializeDatabase() {
         name VARCHAR(100),
         email VARCHAR(100) UNIQUE,
         password VARCHAR(255),
-        company VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -58,6 +59,7 @@ async function initializeDatabase() {
         user_id INTEGER,
         name VARCHAR(100),
         persistent BOOLEAN DEFAULT FALSE,
+        api_key char(10) UNIQUE,
         llm_model VARCHAR(100) DEFAULT 'gpt-3.5-turbo',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE

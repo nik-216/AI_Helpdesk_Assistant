@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../database/db');
 const authenticateToken = require('../middlewares/auth');
+const { generateUniqueApiKey } = require('../utils/apiKeyGenerator');
 
 // Get all chatbots for a user
 router.get('/', authenticateToken, async (req, res) => {
@@ -24,10 +25,11 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     const { name } = req.body;
     const userId = req.user.user_id;
+    const api_key = await generateUniqueApiKey();
     
     const result = await pool.query(
-      'INSERT INTO chat_bots (user_id, name) VALUES ($1, $2) RETURNING *',
-      [userId, name]
+      'INSERT INTO chat_bots (user_id, name, api_key) VALUES ($1, $2, $3) RETURNING *',
+      [userId, name, api_key]
     );
     
     res.status(201).json(result.rows[0]);
@@ -132,6 +134,48 @@ router.post('/:chatbotId/chats/:chatId/history', authenticateToken, async (req, 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to add chat history' });
+  }
+});
+
+// Get chatbot settings
+router.get('/:chatbotId/settings', async (req, res) => {
+  try {
+    const { chatbotId } = req.params;
+    const result = await pool.query(
+      `SELECT persistent, api_key, llm_model 
+       FROM chat_bots 
+       WHERE chat_bot_id = $1`,
+      [chatbotId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Chatbot not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// Update chatbot settings
+router.put('/:chatbotId/settings', async (req, res) => {
+  try {
+    const { chatbotId } = req.params;
+    const { persistent, api_key, llm_model } = req.body;
+    
+    await pool.query(
+      `UPDATE chat_bots 
+       SET persistent = $1, api_key = $2, llm_model = $3
+       WHERE chat_bot_id = $4`,
+      [persistent, api_key, llm_model, chatbotId]
+    );
+    
+    res.json({ message: 'Settings updated successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update settings' });
   }
 });
 
