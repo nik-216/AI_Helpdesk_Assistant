@@ -105,6 +105,7 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
                 onClick={() => setShowNewChatbotModal(true)}
                 className='nav-link nav-link-newchatbot'
               >
+                {/* <img src="/images/plus.png" alt="Add" height="20" />  */}
                 + New Chatbot
               </Link>
             </li>
@@ -116,6 +117,7 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
 
         <div className="signout-container">
         <button onClick={signout} className="signout-button">
+            {/* <img src="/images/exit.png" alt="Sign Out" height="20" /> */}
             Sign Out
         </button>
         </div>
@@ -157,7 +159,7 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
         )}
 
         {message && (
-                <div className='notification' style={{
+                <div className='notificationsidebar' style={{
                     backgroundColor: message.includes('failed') ? '#e74c3c' : '#2ecc71'
                 }}>
                     {message}

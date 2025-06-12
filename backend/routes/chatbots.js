@@ -74,27 +74,12 @@ router.get('/:chatbotId/chats', authenticateToken, async (req, res) => {
   }
 });
 
-// Create a new chat for a chatbot
-router.post('/:chatbotId/chats', authenticateToken, async (req, res) => {
-  try {
-    const { chatbotId } = req.params;
-    const result = await pool.query(
-      'INSERT INTO chats (chat_bot_id) VALUES ($1) RETURNING *',
-      [chatbotId]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to create chat' });
-  }
-});
-
 // Get knowledge items for a specific chatbot
 router.get('/:chatbotId/knowledge', authenticateToken, async (req, res) => {
   try {
     const { chatbotId } = req.params;
     const result = await pool.query(
-      'SELECT * FROM knowledge_embeddings WHERE chat_bot_id = $1 ORDER BY created_at DESC',
+      'SELECT DISTINCT source FROM knowledge_embeddings WHERE chat_bot_id = $1',
       [chatbotId]
     );
     res.json(result.rows);

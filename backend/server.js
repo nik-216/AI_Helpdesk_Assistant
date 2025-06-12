@@ -4,23 +4,38 @@ const { pool } = require('./database/db');
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
 const chatbotRoutes = require('./routes/chatbots'); 
-const chatRoutes = require('./routes/chats');
+const widgetRoutes = require('./routes/widget');
 const multer = require('multer');
 
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3001',
+  'https://yourproductiondomain.com'
+];
+
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true
 }));
+
 app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/chatbots', chatbotRoutes); 
-// app.use('/api/chats', chatRoutes);
+app.use('/api/widget', widgetRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -47,13 +62,6 @@ async function initializeDatabase() {
     `);
 
     await client.query(`
-      CREATE TABLE IF NOT EXISTS client (
-        client_id SERIAL PRIMARY KEY,
-        name VARCHAR(100)
-      );
-    `);
-
-    await client.query(`
       CREATE TABLE IF NOT EXISTS chat_bots (
         chat_bot_id SERIAL PRIMARY KEY,
         user_id INTEGER,
@@ -70,10 +78,9 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS chats (
         chat_id SERIAL PRIMARY KEY,
         chat_bot_id INTEGER,
-        client_id INTEGER,
+        ip_address VARCHAR(45),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (chat_bot_id) REFERENCES chat_bots(chat_bot_id) ON DELETE CASCADE,
-        FOREIGN KEY (client_id) REFERENCES client(client_id) ON DELETE CASCADE
+        FOREIGN KEY (chat_bot_id) REFERENCES chat_bots(chat_bot_id) ON DELETE CASCADE
       );
     `);
 
@@ -82,7 +89,7 @@ async function initializeDatabase() {
         kb_id SERIAL PRIMARY KEY,
         user_id INTEGER,
         chat_bot_id INTEGER,
-        url TEXT,
+        source TEXT,
         chunk TEXT,
         embedding vector(384),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -95,8 +102,8 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS chat_history (
         chat_history_id SERIAL PRIMARY KEY,
         chat_id INTEGER,
-        message TEXT,
-        response TEXT,
+        role VARCHAR(20) CHECK (role IN ('user', 'assistant', 'system')),
+        content TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE
       );

@@ -27,70 +27,6 @@ const upload = multer({
   }
 });
 
-// Process file upload
-router.post('/file', authenticate, upload.single('file'), async (req, res) => {
-  try {
-    console.log('Authenticated user:', req.user); // Debug log
-    
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    // Now safely use req.user.user_id
-    console.log('Processing file:', req.file.originalname); // Debug log
-    console.log('File path:', req.file.path); // Debug log
-    const text = await extractTextFromFile(req.file.path, req.file.originalname);
-    const chunks = chunkText(text);
-    const embeddings = await generateEmbeddings(chunks);
-    await storeEmbeddings(req.user.user_id, req.file.originalname, chunks, embeddings);
-
-    // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
-    
-    res.json({ 
-      success: true, 
-      chunks: chunks.length,
-      source: req.file.originalname
-    });
-  } catch (error) {
-    if (req.file?.path) {
-      fs.unlinkSync(req.file.path);
-    }
-    console.error('File processing error:', error);
-    res.status(500).json({ error: error.message || 'File processing failed' });
-  }
-});
-
-// Process URL
-router.post('/url', authenticate, async (req, res) => {
-  try {
-    // console.log('Database pool:', pool); // Debug log
-    
-    const { url } = req.body;
-    if (!url) {
-      return res.status(400).json({ error: 'URL is required' });
-    }
-
-    const text = await scrapeText(url);
-    const chunks = chunkText(text);
-    const embeddings = await generateEmbeddings(chunks);
-    
-    console.log('Before storeEmbeddings'); // Debug log
-    await storeEmbeddings(req.user.user_id, url, chunks, embeddings);
-    console.log('After storeEmbeddings'); // Debug log
-    
-    res.json({ success: true, chunks: chunks.length });
-  } catch (error) {
-    console.error('Full error:', error);
-    res.status(500).json({ 
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      details: error.detail // For PostgreSQL errors
-    });
-  }
-});
-
-// Helper functions
 const extractTextFromFile = async (filePath, originalName) => {
   if (!filePath || !originalName) {
     throw new Error('File path and original name are required');
@@ -128,13 +64,16 @@ async function scrapeText(url) {
   return result[0];
 }
 
-async function processAndStoreContent(userId, source, text) {
-  const chunks = chunkText(text);
-  const embeddings = await generateEmbeddings(chunks);
-  
-  await storeEmbeddings(userId, source, chunks, embeddings);
-  
-  return { chunks: chunks.length };
+async function extractRelevantText(text) {
+  const options = {
+    mode: 'text',
+    pythonOptions: ['-u'],
+    scriptPath: path.join(__dirname, '../python_scripts'),
+    args: [text]
+  };
+
+  const result = await PythonShell.run('extract.py', options);
+  return result[0];
 }
 
 function chunkText(text, maxWords = 100) {
@@ -169,14 +108,14 @@ async function generateEmbeddings(chunks) {
   }
 }
 
-async function storeEmbeddings(userId, source, chunks, embeddings) {
+async function storeEmbeddings(userId, source, chunks, embeddings, chatbotId) {
   const client = await pool.connect(); // Use the imported pool
   try {
     for (const { chunk, embedding } of embeddings) {
       await client.query(
-        `INSERT INTO knowledge_embeddings (user_id, url, chunk, embedding)
-         VALUES ($1, $2, $3, $4)`,
-        [userId, source, chunk, JSON.stringify(embedding)]
+        `INSERT INTO knowledge_embeddings (user_id, chat_bot_id, source, chunk, embedding)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [userId, chatbotId, source, chunk, JSON.stringify(embedding)]
       );
     }
   } catch (err) {
@@ -186,5 +125,66 @@ async function storeEmbeddings(userId, source, chunks, embeddings) {
     client.release();
   }
 }
+
+// Process file upload
+router.post('/file', authenticate, upload.single('file'), async (req, res) => {
+  try {
+    const { chatbotId } = req.body;
+    console.log('Authenticated user:', req.user); // Debug log
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const text = await extractTextFromFile(req.file.path, req.file.originalname);
+    const relevantText = await extractRelevantText(text);
+    const chunks = chunkText(relevantText);
+    const embeddings = await generateEmbeddings(chunks);
+    await storeEmbeddings(req.user.user_id, req.file.originalname, chunks, embeddings, chatbotId);
+
+    // Clean up uploaded file
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      success: true,
+      chunks: chunks.length,
+      source: req.file.originalname
+    });
+  } catch (error) {
+    if (req.file?.path) {
+      fs.unlinkSync(req.file.path);
+    }
+    console.error('File processing error:', error);
+    res.status(500).json({ error: error.message || 'File processing failed' });
+  }
+});
+
+// Process URL
+router.post('/url', authenticate, async (req, res) => {
+  try {
+    // console.log('Database pool:', pool); // Debug log
+    
+    const { url, chatbotId } = req.body;
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+
+    const text = await scrapeText(url);
+    const relevantText = await extractRelevantText(text);
+    const chunks = chunkText(relevantText);
+    const embeddings = await generateEmbeddings(chunks);
+    
+    await storeEmbeddings(req.user.user_id, url, chunks, embeddings, chatbotId);
+    
+    res.json({ success: true, chunks: chunks.length });
+  } catch (error) {
+    console.error('Full error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      details: error.detail // For PostgreSQL errors
+    });
+  }
+});
 
 module.exports = router;

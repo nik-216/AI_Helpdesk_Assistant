@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../pages/auth/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar/Sidebar';
 import Dashboard from './components/Dashboard/Dashboard';
 import ChatbotPage from './components/ChatbotPage/ChatbotPage';
@@ -9,6 +10,17 @@ const Home = () => {
   const { user, signout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedChatbot, setSelectedChatbot] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/signin');
+    }
+  }, [user, navigate]);
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="admin-container">

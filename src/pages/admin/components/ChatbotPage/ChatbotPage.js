@@ -3,7 +3,7 @@ import axios from 'axios';
 import './ChatbotPage.css';
 
 const ChatbotPage = ({ selectedChatbot}) => {
-    const [activeTab, setActiveTab] = useState('chatbot-knowledge');
+    const [activeTab, setActiveTab] = useState('chatbot-chats');
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showLinkModal, setShowLinkModal] = useState(false);
     const [file, setFile] = useState(null);
@@ -21,6 +21,8 @@ const ChatbotPage = ({ selectedChatbot}) => {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'text/plain'
     ];
+    const [knowledgeItems, setKnowledgeItems] = useState([]);
+
     // Fetch settings when component mounts or chatbot changes
     useEffect(() => {
     const fetchSettings = async () => {
@@ -72,7 +74,7 @@ const ChatbotPage = ({ selectedChatbot}) => {
         formData.append('chatbotId', selectedChatbot.chat_bot_id);
         
         const token = localStorage.getItem('token');
-        const response = await axios.post('http://localhost:8080/api/upload/file', formData, {
+        const response = await axios.post(`http://localhost:8080/api/upload/file`, formData, {
         headers: {
             'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${token}`
@@ -99,7 +101,7 @@ const ChatbotPage = ({ selectedChatbot}) => {
     try {
         const token = localStorage.getItem('token');
         const response = await axios.post(
-        'http://localhost:8080/api/upload/url', 
+        `http://localhost:8080/api/upload/url`, 
         { 
             url: link,
             chatbotId: selectedChatbot.chat_bot_id 
@@ -150,6 +152,33 @@ const ChatbotPage = ({ selectedChatbot}) => {
     }
     };
 
+    // useEffect(() => {
+    // if (message) {
+    //     const timer = setTimeout(() => setMessage(''), 5000);
+    //     return () => clearTimeout(timer);
+    // }
+    // }
+    // , [message]);
+
+    const fetchKnowledgeItems = async () => {
+        try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(
+            `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/knowledge`,
+            {
+            headers: { 'Authorization': `Bearer ${token}` }
+            }
+        );
+        setKnowledgeItems(response.data);
+        } catch (error) {
+        console.error('Error fetching knowledge items:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchKnowledgeItems();
+    }, [selectedChatbot]);
+
     return (
     <div className="chatbot-page">
         <h1 className="chatbot-title">
@@ -180,7 +209,7 @@ const ChatbotPage = ({ selectedChatbot}) => {
         {activeTab === 'chatbot-knowledge' && (
         <div className="knowledge-section">
             <div className="section-header">
-            <h2>Knowledge Base</h2>
+            <h2>Add To Knowledge Base</h2>
             <div className="action-buttons">
                 <button 
                 className="primary-button"
@@ -195,6 +224,24 @@ const ChatbotPage = ({ selectedChatbot}) => {
                 Add Link
                 </button>
             </div>
+            </div>
+            <div className="knowledge-list">
+                <hr></hr>
+                <h2 >Items Present In Knowledge Base</h2>
+                <ul>
+                {knowledgeItems.length > 0 ? (
+                    knowledgeItems.map(item => (
+                    <li 
+                        key={item.id} 
+                        className="knowledge-card"
+                    >
+                        <h4>{item.source}</h4>
+                    </li>
+                    ))
+                ) : (
+                    <p className="no-knowledge-items">You don't have any knowledge items yet.</p>
+                )}
+                </ul>
             </div>
         </div>
         )}
@@ -226,29 +273,18 @@ const ChatbotPage = ({ selectedChatbot}) => {
                 disabled={!isEditing}
                 >
                 <option value="gpt-3.5-turbo">OpenAI (GPT-3.5 Turbo)</option>
-                <option value="gpt-4">OpenAI (GPT-4)</option>
                 <option value="deepseek-chat">DeepSeek Chat</option>
-                <option value="gemini-pro">Google Gemini Pro</option>
+                <option value="gemini">Google Gemini</option>
                 </select>
             </div>
 
             <div className="form-group">
                 <label>API Key:</label>
-                {isEditing ? (
-                <input
-                    type="text"
-                    name="api_key"
-                    value={settings.api_key}
-                    onChange={handleSettingsChange}
-                    placeholder="Enter your API key"
-                />
-                ) : (
                 <div className="api-key-display">
                     {settings.api_key 
                     ? settings.api_key 
                     : 'No API key configured'}
                 </div>
-                )}
             </div>
 
             <div className="settings-actions">
@@ -363,7 +399,7 @@ const ChatbotPage = ({ selectedChatbot}) => {
         {/* Message notification */}
         {message && (
         <div className="notification" style={{
-            backgroundColor: message.includes('failed') ? '#e74c3c' : '#2ecc71'
+            backgroundColor:  message.includes('failed') ? '#e74c3c' : '#2ecc71'
         }}>
             {message}
         </div>

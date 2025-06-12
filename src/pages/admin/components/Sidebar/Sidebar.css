@@ -17,6 +17,7 @@
     color: #ecf0f1;
     margin: 0 0 5px 0;
     font-size: 1.2rem;
+    font-family: "Aboreto", system-ui;
 }
 
 .user-email {
@@ -83,7 +84,13 @@
     border-radius: 4px;
     transition: all 0.3s;
     margin-top: 20px;
-    margin-left: 25%;
+    font-family: "Aboreto", system-ui;
+    font-weight: bold;
+}
+
+.navSectionHeader {
+    max-width: 100%;
+    text-align: center;
 }
 
 .nav-link-newchatbot {
@@ -93,11 +100,15 @@
     cursor: pointer;
     width: 100%;
     transition: background-color 0.3s;
-    padding-left: 27%;
 }
 
 .nav-link-newchatbot:hover {
     background-color: #5e3457;
+}
+
+.nav-item-newchatbot {
+    text-align: center;
+    width: 87%;
 }
 
 .modal-buttons {
@@ -133,7 +144,7 @@
     background-color: #27ae60;
 }
 
-.notification {
+.notificationsidebar {
     position: fixed;
     bottom: 20px;
     left: 20px;
@@ -141,7 +152,7 @@
     color: white;
     border-radius: 4px;
     z-index: 1000;
-    animation: fadeInOut 10000s ease-in-out;
+    animation: fadeInOut 5s ease-in-out;
     opacity: 0;
 }
 
