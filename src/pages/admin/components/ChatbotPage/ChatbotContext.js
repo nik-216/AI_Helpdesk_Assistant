@@ -1,0 +1,44 @@
+import { createContext, useState, useEffect } from 'react';
+import axios from 'axios';
+
+const ChatbotContext = createContext();
+
+export const ChatbotProvider = ({ children }) => {
+    const [chatBots, setChatBots] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const fetchChatBots = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get('http://localhost:8080/api/chatbots', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setChatBots(response.data);
+        } catch (error) {
+            setError(error.response?.data?.error || 'Failed to fetch chatbots');
+            console.error('Error fetching chat bots:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchChatBots();
+    }, []);
+
+    return (
+        <ChatbotContext.Provider value={{ 
+            chatBots, 
+            fetchChatBots,
+            loading,
+            error
+        }}>
+            {children}
+        </ChatbotContext.Provider>
+    );
+};
+
+export default ChatbotContext;

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar/Sidebar';
 import Dashboard from './components/Dashboard/Dashboard';
 import ChatbotPage from './components/ChatbotPage/ChatbotPage';
+import { ChatbotProvider } from './components/ChatbotPage/ChatbotContext';
 import './Home.css';
 
 const Home = () => {
@@ -24,29 +25,31 @@ const Home = () => {
 
   return (
     <div className="admin-container">
-      <Sidebar
-        user={user}
-        signout={signout}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        setSelectedChatbot={setSelectedChatbot}
-      />
-      
-      <div className="admin-main-content">
-        {activeTab === 'dashboard' && (
-          <Dashboard 
-            setActiveTab={setActiveTab}
-            setSelectedChatbot={setSelectedChatbot}
-          />
-        )}
+      <ChatbotProvider>
+        <Sidebar
+          user={user}
+          signout={signout}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          setSelectedChatbot={setSelectedChatbot}
+        />
         
-        {activeTab === 'chatbot' && selectedChatbot && (
-          <ChatbotPage 
-            selectedChatbot={selectedChatbot}
-            setActiveTab={setActiveTab}
-          />
-        )}
-      </div>
+        <div className="admin-main-content">
+          {activeTab === 'dashboard' && (
+            <Dashboard 
+              setActiveTab={setActiveTab}
+              setSelectedChatbot={setSelectedChatbot}
+            />
+          )}
+          
+          {activeTab === 'chatbot' && selectedChatbot && (
+            <ChatbotPage 
+              selectedChatbot={selectedChatbot}
+              setActiveTab={setActiveTab}
+            />
+          )}
+        </div>
+      </ChatbotProvider>
     </div>
   );
 };

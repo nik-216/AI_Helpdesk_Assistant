@@ -1,33 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import './Dashboard.css';
+import ChatbotContext from '../ChatbotPage/ChatbotContext';
 
 const Dashboard = ({ setActiveTab, setSelectedChatbot }) => {
-    const [chatBots, setChatBots] = useState([]);
+    // const [chatBots, setChatBots] = useState([]);
     const [showNewChatbotModal, setShowNewChatbotModal] = useState(false);
     const [newChatbotName, setNewChatbotName] = useState('');
     const [message, setMessage] = useState('');
-
-    const fetchChatBots = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:8080/api/chatbots', {
-            headers: { 'Authorization': `Bearer ${token}` }
-            });
-            setChatBots(response.data);
-        } catch (error) {
-            console.error('Error fetching chat bots:', error);
-        }
-    };
+    const { chatBots, fetchChatBots} = useContext(ChatbotContext);
 
     useEffect(() => {
         fetchChatBots();
     }, []);
 
     const handleChatbotSelect = (chatbot) => {
-    setSelectedChatbot(chatbot);
-    setActiveTab('chatbot');
+        setSelectedChatbot(chatbot);
+        setActiveTab('chatbot');
     };
 
     const handleCreateChatbot = async (e) => {
@@ -73,6 +63,10 @@ const Dashboard = ({ setActiveTab, setSelectedChatbot }) => {
             }
         }
     };
+
+    useEffect(() => {
+        setInterval(() => {setMessage("")}, 1000)
+    }, []);
 
     return (
     <div className="dashboard">

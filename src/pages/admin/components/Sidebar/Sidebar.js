@@ -1,24 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import './Sidebar.css';
+import ChatbotContext from '../ChatbotPage/ChatbotContext';
 
 const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot }) => {
 
-    const [chatBots, setChatBots] = useState([]);
-
-    const fetchChatBots = async () => {
-        try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:8080/api/chatbots', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        setChatBots(response.data);
-        } catch (error) {
-        console.error('Error fetching chat bots:', error);
-        }
-    };
+    // const [chatBots, setChatBots] = useState([]);
+    const { chatBots, fetchChatBots } = useContext(ChatbotContext);
 
     // Handle chatbot selection
     const handleChatbotSelect = (chatbot) => {
