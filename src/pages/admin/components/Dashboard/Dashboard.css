@@ -40,3 +40,137 @@
   color: #7f8c8d;
   font-style: italic;
 }
+
+/* New Chatbot Button */
+.edit-chatbot {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+}
+
+.item-newchatbot {
+    background-color: #2a1b3d;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s;
+    display: inline-block;
+    text-align: center;
+}
+
+.item-newchatbot:hover {
+    background-color: #3d2757;
+    transform: translateY(-1px);
+}
+
+/* Chatbot Card Styling */
+.chatbot-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.chatbot-card h3 {
+    margin: 0;
+    color: #2a1b3d;
+    font-size: 1.1rem;
+}
+
+.chatbot-card p {
+    margin: 5px 0;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* Delete Button */
+.delete-chatbot-button {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.delete-chatbot-button:hover {
+    background-color: #c0392b;
+    transform: scale(1.05);
+}
+
+/* Modal Styling */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    color: #2a1b3d;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.text-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.cancel-button {
+    background-color: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 15px;
+    cursor: pointer;
+}
+
+.upload-button {
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 15px;
+    cursor: pointer;
+}
+
+/* Notification */
+.notificationsidebar {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px
+}

@@ -27,6 +27,7 @@ const upload = multer({
   }
 });
 
+// Extract the text from file depending on the file type
 const extractTextFromFile = async (filePath, originalName) => {
   if (!filePath || !originalName) {
     throw new Error('File path and original name are required');
@@ -52,6 +53,7 @@ const extractTextFromFile = async (filePath, originalName) => {
   }
 };
 
+// Scrape the web page
 async function scrapeText(url) {
   const options = {
     mode: 'text',
@@ -61,31 +63,65 @@ async function scrapeText(url) {
   };
   
   const result = await PythonShell.run('scrape.py', options);
+  console.log("Chunks:", result[0])
   return result[0];
 }
 
-async function extractRelevantText(text) {
-  const options = {
-    mode: 'text',
-    pythonOptions: ['-u'],
-    scriptPath: path.join(__dirname, '../python_scripts'),
-    args: [text]
-  };
+// Chunk the text into chunks for embeddings
+// function chunkText(text, maxWords = 500) {
+//   const words = text.split(/\s+/);
+//   return words.reduce((acc, word, i) => {
+//     const chunkIndex = Math.floor(i / maxWords);
+//     if (!acc[chunkIndex]) acc[chunkIndex] = [];
+//     acc[chunkIndex].push(word);
+//     return acc;
+//   }, []).map(chunk => chunk.join(' '));
+// }
 
-  const result = await PythonShell.run('extract.py', options);
-  return result[0];
+async function chunkText(text, maxWords = 500) {
+  try {
+    if (!text || typeof text !== 'string') {
+      throw new Error('Invalid text input for chunking');
+    }
+
+    const options = {
+      mode: 'text',
+      pythonOptions: ['-u'],
+      scriptPath: path.join(__dirname, '../python_scripts'),
+      args: [JSON.stringify(text), maxWords.toString()]
+    };
+
+    const result = await PythonShell.run('chunking.py', options);
+
+    if (!result || result.length === 0) {
+      throw new Error('Python script returned no output');
+    }
+
+    const output = result[0];
+
+    // Handle Python errors
+    if (output.startsWith('Error:')) {
+      throw new Error(output.substring(6).trim());
+    }
+
+    try {
+      const chunks = JSON.parse(output);
+      if (!Array.isArray(chunks)) {
+        throw new Error('Invalid chunk format - expected array');
+      }
+      return chunks.filter(chunk => chunk.trim().length > 0);
+    } catch (parseError) {
+      console.error('Raw Python output:', output);
+      throw new Error(`Failed to parse Python output: ${parseError.message}`);
+    }
+  } catch (error) {
+    console.error('Chunking error:', error);
+    throw new Error(`Text chunking failed: ${error.message}`);
+  }
 }
 
-function chunkText(text, maxWords = 100) {
-  const words = text.split(/\s+/);
-  return words.reduce((acc, word, i) => {
-    const chunkIndex = Math.floor(i / maxWords);
-    if (!acc[chunkIndex]) acc[chunkIndex] = [];
-    acc[chunkIndex].push(word);
-    return acc;
-  }, []).map(chunk => chunk.join(' '));
-}
 
+// Generate embeddings for text
 let embedder;
 async function generateEmbeddings(chunks) {
   try {
@@ -108,14 +144,32 @@ async function generateEmbeddings(chunks) {
   }
 }
 
+// async function generateEmbeddings(chunks) {
+//   const options = {
+//     mode: 'text',
+//     pythonOptions: ['-u'],
+//     scriptPath: path.join(__dirname, '../python_scripts'),
+//     args: [chunks]
+//   };
+  
+//   const result = await PythonShell.run('generateEmbeddings.py', options);
+//   return result[0];
+// }
+
+// Store the generated embeddings into the database
 async function storeEmbeddings(userId, source, chunks, embeddings, chatbotId) {
   const client = await pool.connect(); // Use the imported pool
   try {
+    const result = await client.query(
+        `INSERT INTO uploaded_data (user_id, chat_bot_id, source, created_at)
+         VALUES ($1, $2, $3, NOW()) RETURNING *`,
+        [userId, chatbotId, source]
+      );
     for (const { chunk, embedding } of embeddings) {
       await client.query(
-        `INSERT INTO knowledge_embeddings (user_id, chat_bot_id, source, chunk, embedding)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [userId, chatbotId, source, chunk, JSON.stringify(embedding)]
+        `INSERT INTO knowledge_embeddings (file_id, chunk, embedding)
+         VALUES ($1, $2, $3)`,
+        [result.rows[0].file_id, chunk, JSON.stringify(embedding)]
       );
     }
   } catch (err) {
@@ -130,15 +184,15 @@ async function storeEmbeddings(userId, source, chunks, embeddings, chatbotId) {
 router.post('/file', authenticate, upload.single('file'), async (req, res) => {
   try {
     const { chatbotId } = req.body;
-    console.log('Authenticated user:', req.user); // Debug log
+    // console.log('Authenticated user:', req.user); 
 
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
     const text = await extractTextFromFile(req.file.path, req.file.originalname);
-    const relevantText = await extractRelevantText(text);
-    const chunks = chunkText(relevantText);
+    // const relevantText = await extractRelevantText(text);
+    const chunks = await chunkText(text);
     const embeddings = await generateEmbeddings(chunks);
     await storeEmbeddings(req.user.user_id, req.file.originalname, chunks, embeddings, chatbotId);
 
@@ -170,8 +224,8 @@ router.post('/url', authenticate, async (req, res) => {
     }
 
     const text = await scrapeText(url);
-    const relevantText = await extractRelevantText(text);
-    const chunks = chunkText(relevantText);
+    // const relevantText = await extractRelevantText(text);
+    const chunks = await chunkText(text);
     const embeddings = await generateEmbeddings(chunks);
     
     await storeEmbeddings(req.user.user_id, url, chunks, embeddings, chatbotId);

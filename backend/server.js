@@ -13,6 +13,7 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://127.0.0.1:3001',
+  'http://127.0.0.1:3003',
   'https://yourproductiondomain.com'
 ];
 
@@ -69,6 +70,8 @@ async function initializeDatabase() {
         persistent BOOLEAN DEFAULT FALSE,
         api_key char(10) UNIQUE,
         llm_model VARCHAR(100) DEFAULT 'gpt-3.5-turbo',
+        specifications TEXT DEFAULT '',
+        temperature FLOAT DEFAULT 0.7,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
       );
@@ -85,16 +88,25 @@ async function initializeDatabase() {
     `);
 
     await client.query(`
-      CREATE TABLE IF NOT EXISTS knowledge_embeddings (
-        kb_id SERIAL PRIMARY KEY,
+      CREATE TABLE IF NOT EXISTS uploaded_data (
+        file_id SERIAL PRIMARY KEY,
         user_id INTEGER,
         chat_bot_id INTEGER,
-        source TEXT,
-        chunk TEXT,
-        embedding vector(384),
+        source VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
         FOREIGN KEY (chat_bot_id) REFERENCES chat_bots(chat_bot_id) ON DELETE CASCADE
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS knowledge_embeddings (
+        kb_id SERIAL PRIMARY KEY,
+        file_id INTEGER,
+        chunk TEXT,
+        embedding vector(384),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (file_id) REFERENCES uploaded_data(file_id) ON DELETE CASCADE
       );
     `);
 
@@ -107,6 +119,13 @@ async function initializeDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE
       );
+    `);
+
+    await client.query(`
+      CREATE INDEX 
+      ON knowledge_embeddings 
+      USING ivfflat (embedding vector_cosine_ops) 
+      WITH (lists = 100);
     `);
 
     console.log('✅ Database tables initialized');

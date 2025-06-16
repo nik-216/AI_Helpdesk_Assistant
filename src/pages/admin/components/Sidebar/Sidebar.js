@@ -7,9 +7,6 @@ import './Sidebar.css';
 const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot }) => {
 
     const [chatBots, setChatBots] = useState([]);
-    const [showNewChatbotModal, setShowNewChatbotModal] = useState(false);
-    const [newChatbotName, setNewChatbotName] = useState('');
-    const [message, setMessage] = useState('');
 
     const fetchChatBots = async () => {
         try {
@@ -31,33 +28,8 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
 
     useEffect(() => {
         fetchChatBots();
+        setInterval(fetchChatBots, 1000)
     }, []);
-
-    const handleCreateChatbot = async (e) => {
-        e.preventDefault();
-        if (!newChatbotName) return;
-
-        try {
-            const token = localStorage.getItem('token');
-            await axios.post(
-            'http://localhost:8080/api/chatbots',
-            { name: newChatbotName },
-            {
-                headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-                }
-            }
-            );
-            
-            setMessage(`Chatbot "${newChatbotName}" created successfully!`);
-            setNewChatbotName('');
-            setShowNewChatbotModal(false);
-            fetchChatBots();
-        } catch (error) {
-            setMessage(error.response?.data?.error || 'Failed to create chatbot');
-        }
-    };
 
     return (
     <div className="sidebar">
@@ -99,17 +71,6 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
                 </li>
             ))}
 
-            <li className='nav-item-newchatbot'>
-              <Link 
-                to="#" 
-                onClick={() => setShowNewChatbotModal(true)}
-                className='nav-link nav-link-newchatbot'
-              >
-                {/* <img src="/images/plus.png" alt="Add" height="20" />  */}
-                + New Chatbot
-              </Link>
-            </li>
-
             <hr></hr>
             
         </ul>
@@ -121,52 +82,6 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
             Sign Out
         </button>
         </div>
-
-        {showNewChatbotModal && (
-            <div className='modal-overlay'>
-                <div className='modal-content'>
-                <h2>Create New Chatbot</h2>
-                <form onSubmit={handleCreateChatbot}>
-                    <div className='form-group'>
-                    <label className='input-label'>Chatbot Name:</label>
-                    <input
-                        type="text"
-                        value={newChatbotName}
-                        onChange={(e) => setNewChatbotName(e.target.value)}
-                        className='text-input'
-                        required
-                        placeholder="My Awesome Chatbot"
-                    />
-                    </div>
-                    <div className='modal-buttons'>
-                    <button 
-                        type="button"
-                        onClick={() => setShowNewChatbotModal(false)}
-                        className='cancel-button'
-                    >
-                        Cancel
-                    </button>
-                    <button 
-                        type="submit"
-                        className='upload-button'
-                    >
-                        Create
-                    </button>
-                    </div>
-                </form>
-                </div>
-            </div>
-        )}
-
-        {message && (
-                <div className='notificationsidebar' style={{
-                    backgroundColor: message.includes('failed') ? '#e74c3c' : '#2ecc71'
-                }}>
-                    {message}
-                </div>
-        )}
-
-        
     </div>
     );
 };

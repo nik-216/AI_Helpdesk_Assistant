@@ -59,15 +59,44 @@ router.get('/:chatbotId', authenticateToken, async (req, res) => {
   }
 });
 
+// delete chatbot
+router.delete('/delete/:chatbotId', authenticateToken, async(req, res)=>{
+  try {
+    const { chatbotId } = req.params
+    const { user_id } = req.user
+
+    await pool.query(
+      'DELETE FROM chat_bots WHERE chat_bot_id = $1 AND user_id = $2',
+      [chatbotId, user_id]
+    );
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete chatbot' });
+  }
+});
+
 // Get chats for a specific chatbot
 router.get('/:chatbotId/chats', authenticateToken, async (req, res) => {
   try {
     const { chatbotId } = req.params;
     const result = await pool.query(
-      'SELECT * FROM chats WHERE chat_bot_id = $1 ORDER BY created_at DESC',
+      'SELECT chat_id, created_at, ip_address FROM chats WHERE chat_bot_id = $1 ORDER BY created_at DESC',
       [chatbotId]
     );
-    res.json(result.rows);
+
+    // Return empty array instead of 404 when no chats exist
+    const chats = result.rows;
+    
+    for (let i = 0; i < chats.length; i++) {
+      const chatId = chats[i].chat_id;
+      const chatHistory = await pool.query(
+        'SELECT role, content, created_at FROM chat_history WHERE chat_id = $1 ORDER BY created_at ASC',
+        [chatId]
+      );
+      chats[i].history = chatHistory.rows;
+    }
+    
+    res.json(chats); // Will return [] if no chats exist
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch chats' });
@@ -79,13 +108,29 @@ router.get('/:chatbotId/knowledge', authenticateToken, async (req, res) => {
   try {
     const { chatbotId } = req.params;
     const result = await pool.query(
-      'SELECT DISTINCT source FROM knowledge_embeddings WHERE chat_bot_id = $1',
+      'SELECT file_id, source FROM uploaded_data WHERE chat_bot_id = $1',
       [chatbotId]
     );
     res.json(result.rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch knowledge items' });
+  }
+});
+
+// Delete knowledge items for a specific chatbot
+router.delete('/:chatbotId/knowledge/delete', authenticateToken, async (req, res) => {
+  try {
+    const { chatbotId } = req.params;
+    const { file_id } = req.body;
+    const result = await pool.query(
+      'DELETE FROM uploaded_data WHERE chat_bot_id = $1 AND file_id = $2 RETURNING *',
+      [chatbotId, file_id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete knowledge items' });
   }
 });
 
@@ -104,30 +149,12 @@ router.get('/:chatbotId/chats/:chatId/history', authenticateToken, async (req, r
   }
 });
 
-// Add message to chat history
-router.post('/:chatbotId/chats/:chatId/history', authenticateToken, async (req, res) => {
-  try {
-    const { chatId } = req.params;
-    const { message, response } = req.body;
-    
-    const result = await pool.query(
-      'INSERT INTO chat_history (chat_id, message, response) VALUES ($1, $2, $3) RETURNING *',
-      [chatId, message, response]
-    );
-    
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to add chat history' });
-  }
-});
-
 // Get chatbot settings
 router.get('/:chatbotId/settings', async (req, res) => {
   try {
     const { chatbotId } = req.params;
     const result = await pool.query(
-      `SELECT persistent, api_key, llm_model 
+      `SELECT persistent, api_key, llm_model, specifications, temperature
        FROM chat_bots 
        WHERE chat_bot_id = $1`,
       [chatbotId]
@@ -148,13 +175,15 @@ router.get('/:chatbotId/settings', async (req, res) => {
 router.put('/:chatbotId/settings', async (req, res) => {
   try {
     const { chatbotId } = req.params;
-    const { persistent, api_key, llm_model } = req.body;
-    
+    const { persistent, api_key, llm_model, specifications, temperature } = req.body;
+
     await pool.query(
       `UPDATE chat_bots 
-       SET persistent = $1, api_key = $2, llm_model = $3
-       WHERE chat_bot_id = $4`,
-      [persistent, api_key, llm_model, chatbotId]
+       SET persistent = $1, api_key = $2, llm_model = $3, 
+           specifications = $4,
+           temperature = $5
+       WHERE chat_bot_id = $6`,
+      [persistent, api_key, llm_model, specifications, temperature, chatbotId]
     );
     
     res.json({ message: 'Settings updated successfully' });

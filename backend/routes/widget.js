@@ -32,6 +32,18 @@ async function generateEmbeddings(chunks) {
   }
 }
 
+// async function generateEmbeddings(chunks) {
+//   const options = {
+//     mode: 'text',
+//     pythonOptions: ['-u'],
+//     scriptPath: path.join(__dirname, '../python_scripts'),
+//     args: [chunks]
+//   };
+  
+//   const result = await PythonShell.run('generateEmbeddings.py', options);
+//   return result[0];
+// }
+
 // Python script for searching similar embeddings
 async function searchSimilar(query, top_k = 10) {
   const embedding = await generateEmbeddings([query]);
@@ -46,16 +58,25 @@ async function searchSimilar(query, top_k = 10) {
   return result;
 }
 
+// Python script to get reply from AI model
+async function getReply(model, messages, similarText, specifications, temperature) {
+  const options = {
+    mode: 'text',
+    pythonOptions: ['-u'],
+    scriptPath: path.join(__dirname, '../python_scripts/LLM'),
+    args: [model, JSON.stringify(messages), JSON.stringify(similarText), specifications, temperature]
+  };
+
+  const result = await PythonShell.run('getReply.py', options);
+  return result[0];
+}
+
 // Store conversation history
 router.post('/chat', authenticateWidget, async (req, res) => {
   try {
     const { messages, ip } = req.body;
     if (!messages || !ip) {
       return res.status(400).json({ error: 'Message and IP are required' });
-    }
-
-    if (!req.chatBot.persistent) {
-        return res.json({ reply: '', messages: [] });
     }
 
     await pool.query(
@@ -65,11 +86,21 @@ router.post('/chat', authenticateWidget, async (req, res) => {
       [req.chatBot.chat_id, 'user', messages[messages.length - 1].content]
     );
 
-    const similar = await searchSimilar(messages[messages.length - 1].content);
-    console.log('Similar items found:', similar);
-    console.log('Length of similar items:', similar.length);
+    const result = await pool.query(
+      'SELECT specifications, temperature FROM chat_bots WHERE chat_bot_id = $1',
+      [req.chatBot.chatBot_id]
+    );
 
-    const reply = "This is a sample response. Implement your AI logic here.";
+    const similarText = await searchSimilar(messages[messages.length - 1].content);
+    console.log('Similar items found:', similarText);
+    console.log('Length of similar items:', similarText.length);
+
+    const reply = await getReply(req.chatBot.llm_model, messages, similarText, result.rows[0].specifications, result.rows[0].temperature);
+
+    console.log('LLM reply:', reply);
+
+    // const reply = "This is a sample response. Implement your AI logic here.";
+
     messages.push({ role: 'assistant', content: reply });
     
     await pool.query(
@@ -86,11 +117,16 @@ router.post('/chat', authenticateWidget, async (req, res) => {
   }
 });
 
+// Load the chat history for the widget
 router.post('/history', authenticateWidget, async (req, res) => {
   try {
     const { ip } = req.body;
     if (!ip) {
       return res.status(400).json({ error: 'IP is required' });
+    }
+
+    if (!req.chatBot.persistent) {
+        return res.json({ reply: '', messages: [] });
     }
 
     const result = await pool.query(

@@ -3,6 +3,7 @@ import psycopg2
 from dotenv import load_dotenv
 import os
 from sentence_transformers import SentenceTransformer
+from sklearn.preprocessing import normalize
 
 load_dotenv()
 
@@ -23,6 +24,7 @@ EMBEDDING_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
 
 try:
     query_emb = EMBEDDING_MODEL.encode(query)
+    query_emb = normalize([query_emb])[0]
     vec_str = "[" + ",".join(map(str, query_emb.tolist())) + "]"
     
     cur.execute("""

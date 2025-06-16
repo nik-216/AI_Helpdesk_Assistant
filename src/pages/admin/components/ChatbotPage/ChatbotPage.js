@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import './ChatbotPage.css';
 
@@ -13,7 +13,9 @@ const ChatbotPage = ({ selectedChatbot}) => {
     const [settings, setSettings] = useState({
     persistent: false,
     api_key: '',
-    llm_model: 'gpt-3.5-turbo'
+    llm_model: 'gpt-3.5-turbo',
+    specifications: '',
+    temperature: 0.7
     });
     const [isEditing, setIsEditing] = useState(false);
     const validFileTypes = [
@@ -22,162 +24,203 @@ const ChatbotPage = ({ selectedChatbot}) => {
     'text/plain'
     ];
     const [knowledgeItems, setKnowledgeItems] = useState([]);
+    const [chats, setChats] = useState([]);
+    const [selectedChat, setSelectedChat] = useState(null);
 
     // Fetch settings when component mounts or chatbot changes
     useEffect(() => {
-    const fetchSettings = async () => {
-        try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(
-            `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/settings`,
-            {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const fetchSettings = async () => {
+            try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(
+                `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/settings`,
+                {
+                headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+            setSettings(response.data);
+            } catch (error) {
+            console.error('Error fetching settings:', error);
             }
-        );
-        setSettings(response.data);
-        } catch (error) {
-        console.error('Error fetching settings:', error);
-        }
-    };
+        };
 
-    fetchSettings();
+        fetchSettings();
     }, [selectedChatbot]);
 
     const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
+        const selectedFile = e.target.files[0];
+        if (!selectedFile) return;
 
-    const extension = selectedFile.name.split('.').pop().toLowerCase();
-    const isValidType = validFileTypes.includes(selectedFile.type) || 
-                        ['.pdf', '.docx', '.txt'].includes(`.${extension}`);
+        const extension = selectedFile.name.split('.').pop().toLowerCase();
+        const isValidType = validFileTypes.includes(selectedFile.type) || 
+                            ['.pdf', '.docx', '.txt'].includes(`.${extension}`);
 
-    if (!isValidType) {
-        setMessage(`Unsupported file type. Please upload PDF, DOCX, or TXT files.`);
-        e.target.value = '';
-        return;
-    }
+        if (!isValidType) {
+            setMessage(`Unsupported file type. Please upload PDF, DOCX, or TXT files.`);
+            e.target.value = '';
+            return;
+        }
 
-    setFile(selectedFile);
-    setMessage('');
+        setFile(selectedFile);
+        setMessage('');
     };
 
     const handleFileUpload = async (e) => {
-    e.preventDefault();
-    if (!file || !selectedChatbot) return;
+        e.preventDefault();
+        if (!file || !selectedChatbot) return;
 
-    setIsProcessing(true);
-    setMessage('Processing document...');
+        setIsProcessing(true);
+        setMessage('Processing document...');
 
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('chatbotId', selectedChatbot.chat_bot_id);
-        
-        const token = localStorage.getItem('token');
-        const response = await axios.post(`http://localhost:8080/api/upload/file`, formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${token}`
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('chatbotId', selectedChatbot.chat_bot_id);
+            
+            const token = localStorage.getItem('token');
+            const response = await axios.post(`http://localhost:8080/api/upload/file`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+                'Authorization': `Bearer ${token}`
+            }
+            });
+            
+            setMessage(`Document processed successfully! ${response.data.chunks} chunks created.`);
+            setShowUploadModal(false);
+            setFile(null);
+            fetchKnowledgeItems();
+        } catch (error) {
+            setMessage(error.response?.data?.error || 'File upload failed');
+        } finally {
+            setIsProcessing(false);
         }
-        });
-        
-        setMessage(`Document processed successfully! ${response.data.chunks} chunks created.`);
-        setShowUploadModal(false);
-        setFile(null);
-    } catch (error) {
-        setMessage(error.response?.data?.error || 'File upload failed');
-    } finally {
-        setIsProcessing(false);
-    }
     };
 
     const handleLinkSubmit = async (e) => {
-    e.preventDefault();
-    if (!link || !selectedChatbot) return;
+        e.preventDefault();
+        if (!link || !selectedChatbot) return;
 
-    setIsProcessing(true);
-    setMessage('Processing link...');
+        setIsProcessing(true);
+        setMessage('Processing link...');
 
-    try {
-        const token = localStorage.getItem('token');
-        const response = await axios.post(
-        `http://localhost:8080/api/upload/url`, 
-        { 
-            url: link,
-            chatbotId: selectedChatbot.chat_bot_id 
-        },
-        {
-            headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.post(
+            `http://localhost:8080/api/upload/url`, 
+            { 
+                url: link,
+                chatbotId: selectedChatbot.chat_bot_id 
+            },
+            {
+                headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+                }
             }
+            );
+            
+            setMessage(`Processed successfully! ${response.data.chunks} chunks created.`);
+            setShowLinkModal(false);
+            setLink('');
+            fetchKnowledgeItems();
+        } catch (error) {
+            setMessage(error.response?.data?.error || 'URL processing failed');
+        } finally {
+            setIsProcessing(false);
         }
-        );
-        
-        setMessage(`Processed successfully! ${response.data.chunks} chunks created.`);
-        setShowLinkModal(false);
-        setLink('');
-    } catch (error) {
-        setMessage(error.response?.data?.error || 'URL processing failed');
-    } finally {
-        setIsProcessing(false);
-    }
     };
 
     const handleSettingsChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setSettings(prev => ({
-        ...prev,
-        [name]: type === 'checkbox' ? checked : value
-    }));
+        const { name, value, type, checked } = e.target;
+            setSettings(prev => ({
+                ...prev,
+                [name]: type === 'checkbox' ? checked : value
+        }));
     };
 
     const saveSettings = async () => {
-    try {
-        const token = localStorage.getItem('token');
-        await axios.put(
-        `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/settings`,
-        settings,
-        {
-            headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-            }
-        }
-        );
-        setMessage('Settings saved successfully!');
-        setIsEditing(false);
-    } catch (error) {
-        setMessage(error.response?.data?.error || 'Failed to save settings');
-    }
-    };
-
-    // useEffect(() => {
-    // if (message) {
-    //     const timer = setTimeout(() => setMessage(''), 5000);
-    //     return () => clearTimeout(timer);
-    // }
-    // }
-    // , [message]);
-
-    const fetchKnowledgeItems = async () => {
         try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(
-            `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/knowledge`,
+            const token = localStorage.getItem('token');
+            await axios.put(
+            `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/settings`,
+            settings,
             {
-            headers: { 'Authorization': `Bearer ${token}` }
+                headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+                }
             }
-        );
-        setKnowledgeItems(response.data);
+            );
+            setMessage('Settings saved successfully!');
+            setIsEditing(false);
         } catch (error) {
-        console.error('Error fetching knowledge items:', error);
+            setMessage(error.response?.data?.error || 'Failed to save settings');
         }
     };
+
+    const fetchKnowledgeItems = useCallback(async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(
+                `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/knowledge`,
+                {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+            setKnowledgeItems(response.data);
+        } catch (error) {
+            console.error('Error fetching knowledge items:', error);
+        }
+    }, [selectedChatbot]);
 
     useEffect(() => {
         fetchKnowledgeItems();
+    }, [selectedChatbot, fetchKnowledgeItems]);
+
+    const deleteKnowledgeItem = async (fileId) => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.delete(
+                `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/knowledge/delete`,
+                {
+                    data: {
+                        file_id: fileId
+                    },
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+            setMessage('Knowledge item deleted successfully!');
+            fetchKnowledgeItems();
+        } catch (error) {
+            setMessage(error.response?.data?.error || 'Failed to delete knowledge item');
+        }
+    }
+
+    const fetchChats = useCallback(async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(
+                `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/chats`,
+                {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+            // Will receive [] if no chats exist
+            setChats(response.data);
+        } catch (error) {
+            if (error.response && error.response.status === 404) {
+                // Handle case where endpoint might still return 404
+                setChats([]);
+            } else {
+                console.error('Error fetching chats:', error);
+                setMessage('Failed to load chat history');
+            }
+        }
     }, [selectedChatbot]);
+
+    useEffect(() => {
+        fetchChats();
+    }, [selectedChatbot, fetchChats]);
 
     return (
     <div className="chatbot-page">
@@ -206,42 +249,135 @@ const ChatbotPage = ({ selectedChatbot}) => {
             </button>
         </div>
 
+        {activeTab === 'chatbot-chats' && (
+        <div className="chats-section">
+            <h2>Chat History</h2>
+            <div className="chats-list">
+            {chats.length > 0 ? (
+                chats.map(chat => (
+                <div 
+                    key={chat.chat_id} 
+                    className="chat-item"
+                    onClick={() => setSelectedChat(chat)}
+                >
+                    <div className="chat-content">
+                    <div className="chat-header">
+                        <h4>Chat #{chat.chat_id}</h4>
+                        <span className="chat-date">
+                        {new Date(chat.created_at).toLocaleString()}
+                        </span>
+                    </div>
+                    {chat.ip_address && (
+                        <p className="chat-ip">IP: {chat.ip_address}</p>
+                    )}
+                    {chat.history?.length > 0 && (
+                        <div className="message-preview">
+                        <p className="preview-text">
+                            {chat.history[0].content.substring(0, 80)}...
+                        </p>
+                        <span className="preview-info">
+                            {chat.history.length} messages
+                        </span>
+                        </div>
+                    )}
+                    </div>
+                </div>
+                ))
+            ) : (
+                <p className="no-chats">No chats available for this chatbot.</p>
+            )}
+            </div>
+
+            {/* Chat History Modal */}
+            {selectedChat && (
+            <div className="chat-modal-overlay" onClick={() => setSelectedChat(null)}>
+                <div className="chat-modal-content" onClick={e => e.stopPropagation()}>
+                <div className="chat-modal-header">
+                    <h3>Chat #{selectedChat.chat_id}</h3>
+                    <button 
+                    className="close-modal"
+                    onClick={() => setSelectedChat(null)}
+                    >
+                    &times;
+                    </button>
+                </div>
+                <div className="chat-meta">
+                    <span>Started: {new Date(selectedChat.created_at).toLocaleString()}</span>
+                    {selectedChat.ip_address && (
+                    <span>IP: {selectedChat.ip_address}</span>
+                    )}
+                </div>
+                <div className="chat-history">
+                    {selectedChat.history?.length > 0 ? (
+                    selectedChat.history.map((message, index) => (
+                        <div 
+                        key={index} 
+                        className={`message ${message.role}`}
+                        >
+                        <div className="message-header">
+                            <span className="message-role">
+                            {message.role === 'user' ? 'User' : 'Assistant'}
+                            </span>
+                            <span className="message-time">
+                            {new Date(message.created_at).toLocaleTimeString()}
+                            </span>
+                        </div>
+                        <div className="message-text">
+                            {message.content}
+                        </div>
+                        </div>
+                    ))
+                    ) : (
+                    <p className="no-messages">No messages in this conversation</p>
+                    )}
+                </div>
+                </div>
+            </div>
+            )}
+        </div>
+        )}
+
         {activeTab === 'chatbot-knowledge' && (
         <div className="knowledge-section">
             <div className="section-header">
-            <h2>Add To Knowledge Base</h2>
-            <div className="action-buttons">
-                <button 
-                className="primary-button"
-                onClick={() => setShowUploadModal(true)}
-                >
-                Upload Document
-                </button>
-                <button 
-                className="primary-button"
-                onClick={() => setShowLinkModal(true)}
-                >
-                Add Link
-                </button>
-            </div>
-            </div>
-            <div className="knowledge-list">
-                <hr></hr>
-                <h2 >Items Present In Knowledge Base</h2>
-                <ul>
-                {knowledgeItems.length > 0 ? (
-                    knowledgeItems.map(item => (
-                    <li 
-                        key={item.id} 
-                        className="knowledge-card"
+                <h2>Add To Knowledge Base</h2>
+                <div className="action-buttons">
+                    <button 
+                    className="primary-button"
+                    onClick={() => setShowUploadModal(true)}
                     >
-                        <h4>{item.source}</h4>
-                    </li>
+                    Upload Document
+                    </button>
+                    <button 
+                    className="primary-button"
+                    onClick={() => setShowLinkModal(true)}
+                    >
+                    Add Link
+                    </button>
+                </div>
+            </div>
+            <div className="knowledge-section">
+                <hr></hr>
+                <h2>Items Present In Knowledge Base</h2>
+                <div className="knowledge-list">
+                    {knowledgeItems.length > 0 ? (
+                    knowledgeItems.map(item => (
+                        <div key={item.file_id} className="knowledge-item">
+                        <div className="item-content">
+                            <h4>{item.source}</h4>
+                        </div>
+                        <button
+                            className="delete-button"
+                            onClick={() => deleteKnowledgeItem(item.file_id)}
+                        >
+                            Delete
+                        </button>
+                        </div>
                     ))
-                ) : (
+                    ) : (
                     <p className="no-knowledge-items">You don't have any knowledge items yet.</p>
-                )}
-                </ul>
+                    )}
+                </div>
             </div>
         </div>
         )}
@@ -274,7 +410,7 @@ const ChatbotPage = ({ selectedChatbot}) => {
                 >
                 <option value="gpt-3.5-turbo">OpenAI (GPT-3.5 Turbo)</option>
                 <option value="deepseek-chat">DeepSeek Chat</option>
-                <option value="gemini">Google Gemini</option>
+                <option value="gemini-1.5-flash">Google Gemini 1.5 Flash</option>
                 </select>
             </div>
 
@@ -285,6 +421,34 @@ const ChatbotPage = ({ selectedChatbot}) => {
                     ? settings.api_key 
                     : 'No API key configured'}
                 </div>
+            </div>
+
+            <div className="form-group">
+                <label>Specifications:</label>
+                <input
+                type="text"
+                name="specifications"
+                value={settings.specifications}
+                onChange={handleSettingsChange}
+                disabled={!isEditing}
+                placeholder="Enter specifications"
+                className="text-input"
+                />
+            </div>
+
+            <div className="form-group">
+                <label>Temperature:</label>
+                <input
+                type="number"
+                name="temperature"
+                value={settings.temperature}
+                onChange={handleSettingsChange}
+                disabled={!isEditing}
+                step="0.1"
+                min="0"
+                max="1"
+                className="text-input"
+                />
             </div>
 
             <div className="settings-actions">
