@@ -149,4 +149,27 @@ router.post('/history', authenticateWidget, async (req, res) => {
   }
 });
 
+// Clear the chat history
+router.delete('/clearChat', authenticateWidget, async (req, res) =>  {
+  const { chat_id } = req.chatBot;
+  const { ip } = req.body;
+
+  console.log('Chat_id: ', chat_id);
+
+  if (!ip) {
+    return res.status(400).json({ error: 'IP is required' });
+  }
+
+  try {
+    await pool.query(
+      `DELETE FROM chat_history
+      WHERE chat_id = $1;`,
+      [chat_id]
+    );
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete chat history' });
+  }
+});
+
 module.exports = router;

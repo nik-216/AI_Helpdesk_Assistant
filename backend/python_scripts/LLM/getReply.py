@@ -24,17 +24,31 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 all_messages_for_api = []
 
-system_msg = '''You are a helpful chatbot that answers questions using ONLY the information provided in the knowledge base. Use a polite and informational tone.
+# system_msg = '''You are a helpful chatbot that answers questions using ONLY the information provided in the knowledge base. Use a polite and informational tone.
 
-When answering:
-1. First analyze if the knowledge base contains relevant information
-2. If relevant information exists, synthesize a concise answer using ONLY that information
-3. If no relevant information exists, respond: "I'm sorry, but I'm not able to assist with that request. Please feel free to ask something else, and I'll do my best to help!"
-4. Answer the question without mentioning that there is a knowledge base that is being referred.
+# When answering:
+# 1. First analyze if the knowledge base contains relevant information
+# 2. If relevant information exists, synthesize a concise answer using ONLY that information
+# 3. If no relevant information exists, respond: "I'm sorry, but I'm not able to assist with that request. Please feel free to ask something else, and I'll do my best to help!"
 
-Knowledge base content will be marked with triple backticks (```) and the Question to be answered will be marked with astrik (*).
+# Knowledge base content will be marked with triple backticks (```) and the Question to be answered will be marked with astrik (*).
 
-NEVER make up information or speculate beyond what's in the knowledge base.'''
+# NEVER make up information or speculate beyond what's in the knowledge base.'''
+
+system_msg = '''You are a helpful assistant that provides accurate answers using ONLY the information in the knowledge base. Maintain a professional yet approachable tone.
+
+Guidelines:
+1. Carefully review the knowledge base content (marked with ```) for information relevant to the question (marked with *)
+2. If relevant information exists, provide a clear, concise response using ONLY that content
+3. If the knowledge base doesn't contain relevant information, respond: 
+   "I'm sorry, but I'm not able to assist with that request. Please feel free to ask something else, and I'll do my best to help!"
+
+Important rules:
+- NEVER invent information or speculate beyond the provided knowledge base
+- Never begin responses with "Based on the provided text" or similar phrases
+- Always keep answers focused and directly responsive to the question
+- Use markdown formatting when appropriate for clarity (lists, bold, etc.)
+- If citing specific details, implicitly reference them without explicit attribution'''
 
 # Function to format messages as required by OpenAI
 def OPNEAI_format_msgs(messages, all_messages_for_api):
@@ -68,11 +82,11 @@ def GOOGLE_format_msgs(messages, all_messages_for_api):
         })
 
     if all_messages_for_api[-1]['role'] == 'user':
-        all_messages_for_api[-1]['parts'][0]['text'] += "\n\n" + "Question:" + "*" + messages[-1]['content'] + "*" + "Knowledge Base:" + "`" + similar_text + "`"
+        all_messages_for_api[-1]['parts'][0]['text'] += "\n\n" + "Question:" + "*" + messages[-1]['content'] + "*" + "Knowledge Base:" + "```" + similar_text + "```"
     else:
         all_messages_for_api.append({
             'role': 'user',
-            'parts': [{'text': "Question:" + "*" + messages[-1]['content'] + "*" + "Knowledge Base:" + "`" + similar_text + "`"}]
+            'parts': [{'text': "Question:" + "*" + messages[-1]['content'] + "*" + "Knowledge Base:" + "```" + similar_text + "```"}]
         })
 
 

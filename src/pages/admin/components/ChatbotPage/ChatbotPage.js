@@ -10,13 +10,16 @@ const ChatbotPage = ({ selectedChatbot}) => {
     const [link, setLink] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [message, setMessage] = useState('');
+
     const [settings, setSettings] = useState({
     persistent: false,
     api_key: '',
     llm_model: 'gpt-3.5-turbo',
     specifications: '',
+    rejectionmsg: '',
     temperature: 0.7
     });
+
     const [isEditing, setIsEditing] = useState(false);
     const validFileTypes = [
     'application/pdf',
@@ -267,9 +270,6 @@ const ChatbotPage = ({ selectedChatbot}) => {
                         {new Date(chat.created_at).toLocaleString()}
                         </span>
                     </div>
-                    {chat.ip_address && (
-                        <p className="chat-ip">IP: {chat.ip_address}</p>
-                    )}
                     {chat.history?.length > 0 && (
                         <div className="message-preview">
                         <p className="preview-text">
@@ -432,6 +432,19 @@ const ChatbotPage = ({ selectedChatbot}) => {
                 onChange={handleSettingsChange}
                 disabled={!isEditing}
                 placeholder="Enter specifications"
+                className="text-input"
+                />
+            </div>
+
+            <div className="form-group">
+                <label>Rejection Message:</label>
+                <input
+                type="text"
+                name="rejectionmsg"
+                value={settings.rejectionmsg}
+                onChange={handleSettingsChange}
+                disabled={!isEditing}
+                placeholder="Enter rejection message"
                 className="text-input"
                 />
             </div>

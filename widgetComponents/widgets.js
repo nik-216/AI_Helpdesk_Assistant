@@ -1,9 +1,12 @@
 (function () {
+
+  const widgetContainer = document.getElementById('chat-widget') || document.body;
+  const apiKey = widgetContainer.dataset.apiKey;
+
   // Configuration
   const config = {
-    apiKey: '4306db0899',
-    apiUrl: 'http://localhost:8080/api/widget/chat',
-    historyUrl: 'http://localhost:8080/api/widget/history',
+    apiKey: apiKey,
+    rootUrl: 'http://localhost:8080/api/widget',
     botName: 'Support Bot',
     primaryColor: '#780000', //3a345b 122b1d
     secondaryColor: '#74b9c7', //b9d8e1 90b7bf 669bbc
@@ -14,7 +17,13 @@
     textColor: ''
   };
 
+  config.apiUrl = config.rootUrl + '/chat'
+  config.historyUrl = config.rootUrl +  '/history'
+  config.clearChatUrl = config.rootUrl + '/clearChat'
+
   const messages = [];
+  let recognition; // For speech recognition
+  let isListening = false; // Track recording state
 
   // Get client IP (using a free IP API)
   async function getClientIP() {
@@ -163,11 +172,18 @@
       </div>
       <span>${config.botName}</span>
     </div>
-    <button id="close-chat" style="background: none; border: none; cursor: pointer; color: ${config.textColor};">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
+    <div style="display: flex; gap: 8px;">
+      <button id="clear-chat" style="background: none; border: none; cursor: pointer; color: ${config.textColor};">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button id="close-chat" style="background: none; border: none; cursor: pointer; color: ${config.textColor};">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
   `;
   Object.assign(chatHeader.style, {
     padding: '16px',
@@ -180,6 +196,39 @@
     borderBottom: '1px solid #e5e7eb'
   });
   popup.appendChild(chatHeader);
+
+  // Clear chat button functionality
+  const clearButton = chatHeader.querySelector('#clear-chat');
+  clearButton.addEventListener('click', () => {
+
+  const confirmClear = confirm("Are you sure you want to clear the chat history?");
+  if (confirmClear) {
+      chatBody.innerHTML = '';
+      messages.length = 0;
+      
+      fetch(config.clearChatUrl, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${config.apiKey}`
+        },
+        body: JSON.stringify({ ip: clientIP }),
+      }).catch(err => console.error("Error clearing history:", err));
+      
+      setTimeout(() => {
+        addMessage("Hello! I'm your support assistant. How can I help you today?", 'bot');
+      }, 300);
+  }
+});
+
+  // Add hover effects to clear button
+  clearButton.addEventListener('mouseenter', () => {
+    clearButton.style.color = '#ef4444'; // Red color on hover
+  });
+
+  clearButton.addEventListener('mouseleave', () => {
+    clearButton.style.color = config.textColor || '#6b7280';
+  });
 
   // Close button functionality
   const closeButton = chatHeader.querySelector('#close-chat');
@@ -232,6 +281,219 @@
     input.style.borderColor = '#e5e7eb';
   });
 
+  // Create audio button
+  const audioBtn = document.createElement('button');
+  audioBtn.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" fill="currentColor"/>
+      <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `;
+  Object.assign(audioBtn.style, {
+    width: '40px',
+    height: '40px',
+    backgroundColor: config.accentColor,
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
+  });
+
+  audioBtn.addEventListener('mouseenter', () => {
+    audioBtn.style.backgroundColor = '#002233'; // Darker shade
+  });
+
+  audioBtn.addEventListener('mouseleave', () => {
+    audioBtn.style.backgroundColor = isListening ? '#ff0000' : config.accentColor;
+  });
+
+  // Enhanced speech recognition initialization
+  function initSpeechRecognition() {
+    try {
+      // Check for API support
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.warn('Speech recognition not supported');
+        audioBtn.style.display = 'none';
+        return false;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      // Network timeout (5 seconds)
+      let networkTimeout;
+
+      recognition.onstart = () => {
+        isListening = true;
+        audioBtn.style.backgroundColor = '#ff0000';
+        audioBtn.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="6" y="5" width="12" height="14" rx="6" fill="currentColor"/>
+          </svg>
+        `;
+        addMessage("Listening... Speak now", 'bot');
+        
+        // Set network timeout
+        networkTimeout = setTimeout(() => {
+          if (isListening) {
+            recognition.stop();
+            handleNetworkError();
+          }
+        }, 5000);
+      };
+
+      recognition.onresult = (event) => {
+        clearTimeout(networkTimeout);
+        const transcript = event.results[0][0].transcript;
+        if (transcript.trim()) {
+          input.value = transcript;
+          handleSend();
+        }
+      };
+
+      recognition.onerror = (event) => {
+        clearTimeout(networkTimeout);
+        console.error('Speech recognition error:', event.error);
+        
+        if (event.error === 'network') {
+          handleNetworkError();
+        } else {
+          handleRecognitionError(event.error);
+        }
+        
+        stopListening();
+      };
+
+      recognition.onend = () => {
+        clearTimeout(networkTimeout);
+        if (isListening) {
+          stopListening();
+        }
+      };
+
+      return true;
+    } catch (err) {
+      console.error('Speech recognition initialization failed:', err);
+      disableVoiceInput();
+      return false;
+    }
+  }
+
+  function handleNetworkError() {
+    addMessage({
+      text: "Network connection required for voice input",
+      details: [
+        "• Please check your internet connection",
+        "• Try again when you have better network",
+        "• You can still type your message below"
+      ],
+      type: 'warning'
+    }, 'bot');
+    
+    // Show network status indicator
+    showNetworkStatus(false);
+  }
+
+  function handleRecognitionError(errorCode) {
+    const errors = {
+      'not-allowed': "Microphone access was denied. Please allow microphone permissions in your browser settings.",
+      'no-speech': "No speech was detected. Please try speaking louder or closer to your microphone.",
+      'audio-capture': "Couldn't capture audio. Please check your microphone connection.",
+      'service-not-allowed': "Speech recognition service is not available.",
+      'language-not-supported': "English language is required for voice input."
+    };
+    
+    addMessage({
+      text: "Voice input error",
+      details: [errors[errorCode] || "Voice input is currently unavailable. Please try typing instead."],
+      type: 'error'
+    }, 'bot');
+  }
+
+  function showNetworkStatus(online) {
+    const existingStatus = document.getElementById('network-status-indicator');
+    if (existingStatus) existingStatus.remove();
+    
+    if (!online) {
+      const statusIndicator = document.createElement('div');
+      statusIndicator.id = 'network-status-indicator';
+      statusIndicator.innerHTML = `
+        <div style="
+          background: #fff3cd;
+          color: #856404;
+          padding: 8px 12px;
+          border-radius: 4px;
+          margin: 8px 16px;
+          font-size: 13px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        ">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke="#856404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Voice input requires internet connection</span>
+        </div>
+      `;
+      chatBody.appendChild(statusIndicator);
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+  }
+
+
+  function startListening() {
+    if (!recognition) {
+      if (!initSpeechRecognition()) {
+        addMessage("Voice input is not supported in your browser", 'bot');
+        return;
+      }
+    }
+    
+    try {
+      recognition.start();
+    } catch (err) {
+      console.error('Speech recognition start failed:', err);
+      addMessage("Couldn't start voice input. Please try again.", 'bot');
+      stopListening();
+    }
+  }
+
+  function stopListening() {
+    isListening = false;
+    audioBtn.style.backgroundColor = config.accentColor;
+    audioBtn.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" fill="currentColor"/>
+        <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    `;
+  }
+
+  // Audio button click handler with permission check
+  audioBtn.addEventListener('click', async () => {
+    if (isListening) {
+      recognition.stop();
+      return;
+    }
+
+    // Check microphone permissions first
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop()); // Immediately release
+      startListening();
+    } catch (err) {
+      console.error('Microphone permission denied:', err);
+      addMessage("Please enable microphone permissions to use voice input", 'bot');
+    }
+  });
+
   const sendBtn = document.createElement('button');
   sendBtn.innerHTML = `
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -261,6 +523,7 @@
   });
 
   inputArea.appendChild(input);
+  inputArea.appendChild(audioBtn);
   inputArea.appendChild(sendBtn);
   popup.appendChild(inputArea);
 
@@ -283,7 +546,8 @@
   };
 
   // === Add messages to chat ===
-  function addMessage(text, sender = 'user') {
+  // Enhanced message display function
+  function addMessage(content, sender = 'user') {
     const messageContainer = document.createElement('div');
     messageContainer.style.display = 'flex';
     messageContainer.style.flexDirection = sender === 'user' ? 'row-reverse' : 'row';
@@ -311,11 +575,59 @@
     name.textContent = sender === 'user' ? 'You' : config.botName;
     name.style.fontWeight = '600';
     name.style.fontSize = '12px';
-    name.style.color = config.textColor; // #6b7280
+    name.style.color = config.textColor || '#6b7280';
     name.style.marginBottom = '4px';
 
     const messageBubble = document.createElement('div');
-    messageBubble.textContent = text;
+    const messageTextContainer = document.createElement('div');
+    
+    // Handle both string and object messages
+    if (typeof content === 'string') {
+      messageBubble.textContent = content;
+    } else if (typeof content === 'object') {
+      // Create message text
+      const messageText = document.createElement('div');
+      messageText.textContent = content.text || '';
+      messageText.style.marginBottom = content.details ? '8px' : '0';
+      messageBubble.appendChild(messageText);
+      
+      // Add details if present
+      if (content.details && content.details.length) {
+        const detailsList = document.createElement('div');
+        detailsList.style.fontSize = '13px';
+        detailsList.style.lineHeight = '1.4';
+        
+        content.details.forEach(detail => {
+          const detailItem = document.createElement('div');
+          detailItem.style.display = 'flex';
+          detailItem.style.alignItems = 'flex-start';
+          detailItem.style.gap = '6px';
+          detailItem.style.marginBottom = '4px';
+          
+          const bullet = document.createElement('div');
+          bullet.textContent = '•';
+          bullet.style.flexShrink = '0';
+          
+          const text = document.createElement('div');
+          text.textContent = detail;
+          
+          detailItem.appendChild(bullet);
+          detailItem.appendChild(text);
+          detailsList.appendChild(detailItem);
+        });
+        
+        messageBubble.appendChild(detailsList);
+      }
+      
+      // Add action button if present
+      if (content.action) {
+        const actionContainer = document.createElement('div');
+        actionContainer.style.marginTop = '8px';
+        actionContainer.appendChild(content.action);
+        messageBubble.appendChild(actionContainer);
+      }
+    }
+
     messageBubble.style.padding = '10px 14px';
     messageBubble.style.borderRadius = sender === 'user' ? '12px 12px 0 12px' : '12px 12px 12px 0';
     messageBubble.style.backgroundColor = sender === 'user' ? config.primaryColor : config.accentColor;
@@ -330,7 +642,6 @@
 
     chatBody.appendChild(messageContainer);
     chatBody.scrollTop = chatBody.scrollHeight;
-
   }
 
   // === Typing indicator ===
@@ -457,6 +768,7 @@
 
   if (document.readyState === 'complete') {
     initWidget();
+    initSpeechRecognition();
   } else {
     window.addEventListener('DOMContentLoaded', initWidget);
   }

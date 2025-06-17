@@ -80,7 +80,7 @@ router.get('/:chatbotId/chats', authenticateToken, async (req, res) => {
   try {
     const { chatbotId } = req.params;
     const result = await pool.query(
-      'SELECT chat_id, created_at, ip_address FROM chats WHERE chat_bot_id = $1 ORDER BY created_at DESC',
+      'SELECT chat_id, created_at FROM chats WHERE chat_bot_id = $1 ORDER BY created_at DESC',
       [chatbotId]
     );
 

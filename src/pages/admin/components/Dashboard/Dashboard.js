@@ -9,11 +9,11 @@ const Dashboard = ({ setActiveTab, setSelectedChatbot }) => {
     const [showNewChatbotModal, setShowNewChatbotModal] = useState(false);
     const [newChatbotName, setNewChatbotName] = useState('');
     const [message, setMessage] = useState('');
-    const { chatBots, fetchChatBots} = useContext(ChatbotContext);
+    const { chatBots, fetchChatBots, refreshChatBots} = useContext(ChatbotContext);
 
     useEffect(() => {
         fetchChatBots();
-    }, []);
+    }, [fetchChatBots]);
 
     const handleChatbotSelect = (chatbot) => {
         setSelectedChatbot(chatbot);
@@ -26,7 +26,7 @@ const Dashboard = ({ setActiveTab, setSelectedChatbot }) => {
 
         try {
             const token = localStorage.getItem('token');
-            const req = await axios.post(
+            await axios.post(
             'http://localhost:8080/api/chatbots',
             { name: newChatbotName },
             {
@@ -58,6 +58,7 @@ const Dashboard = ({ setActiveTab, setSelectedChatbot }) => {
                     }
                 );
                 setMessage(`Chatbot "${chatbot.name}" deleted successfully!`);
+                refreshChatBots();
             } catch (error) {
                 setMessage(error.response?.data?.error || 'Failed to delete chatbot');
             }

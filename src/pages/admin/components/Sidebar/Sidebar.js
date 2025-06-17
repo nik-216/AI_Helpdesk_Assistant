@@ -1,7 +1,5 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
-import { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import { useEffect, useContext } from 'react';
 import './Sidebar.css';
 import ChatbotContext from '../ChatbotPage/ChatbotContext';
 
@@ -19,7 +17,7 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
     useEffect(() => {
         fetchChatBots();
         setInterval(fetchChatBots, 1000)
-    }, []);
+    }, [fetchChatBots]);
 
     return (
     <div className="sidebar">

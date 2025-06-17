@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const ChatbotContext = createContext();
@@ -7,8 +7,10 @@ export const ChatbotProvider = ({ children }) => {
     const [chatBots, setChatBots] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    const fetchChatBots = async () => {
+    // Memoize fetchChatBots but include refreshTrigger as dependency
+    const fetchChatBots = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -23,16 +25,23 @@ export const ChatbotProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [refreshTrigger]); // Now will update when refreshTrigger changes
 
+    // Initial fetch and when refreshTrigger changes
     useEffect(() => {
         fetchChatBots();
+    }, [fetchChatBots]);
+
+    // Add a refresh function to trigger updates
+    const refreshChatBots = useCallback(() => {
+        setRefreshTrigger(prev => prev + 1); // Increment to trigger refresh
     }, []);
 
     return (
         <ChatbotContext.Provider value={{ 
             chatBots, 
             fetchChatBots,
+            refreshChatBots, // Provide this new function
             loading,
             error
         }}>
