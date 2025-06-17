@@ -71,6 +71,7 @@ async function initializeDatabase() {
         api_key char(10) UNIQUE,
         llm_model VARCHAR(100) DEFAULT 'gpt-3.5-turbo',
         specifications TEXT DEFAULT '',
+        rejection_msg TEXT DEFAULT '',
         temperature FLOAT DEFAULT 0.7,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE

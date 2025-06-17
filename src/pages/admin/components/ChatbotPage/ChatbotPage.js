@@ -223,6 +223,7 @@ const ChatbotPage = ({ selectedChatbot}) => {
 
     useEffect(() => {
         fetchChats();
+        setInterval(fetchChats, 10000)
     }, [selectedChatbot, fetchChats]);
 
     return (

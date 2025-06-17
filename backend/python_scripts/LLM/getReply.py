@@ -15,7 +15,8 @@ model = sys.argv[1]
 messages = ast.literal_eval(sys.argv[2])
 similar_text = sys.argv[3]
 specifications = sys.argv[4]
-temp = float(sys.argv[5])
+rejection_msg = sys.argv[5]
+temp = float(sys.argv[6])
 
 # Get all the api keys
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -23,6 +24,9 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 all_messages_for_api = []
+
+if rejection_msg == '':
+    rejection_msg = '''"I'm sorry, but I'm not able to assist with that request. Please feel free to ask something else, and I'll do my best to help!"'''
 
 # system_msg = '''You are a helpful chatbot that answers questions using ONLY the information provided in the knowledge base. Use a polite and informational tone.
 
@@ -41,7 +45,7 @@ Guidelines:
 1. Carefully review the knowledge base content (marked with ```) for information relevant to the question (marked with *)
 2. If relevant information exists, provide a clear, concise response using ONLY that content
 3. If the knowledge base doesn't contain relevant information, respond: 
-   "I'm sorry, but I'm not able to assist with that request. Please feel free to ask something else, and I'll do my best to help!"
+''' + rejection_msg + '''
 
 Important rules:
 - NEVER invent information or speculate beyond the provided knowledge base
@@ -49,6 +53,8 @@ Important rules:
 - Always keep answers focused and directly responsive to the question
 - Use markdown formatting when appropriate for clarity (lists, bold, etc.)
 - If citing specific details, implicitly reference them without explicit attribution'''
+
+
 
 # Function to format messages as required by OpenAI
 def OPNEAI_format_msgs(messages, all_messages_for_api):

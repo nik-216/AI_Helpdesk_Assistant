@@ -154,7 +154,7 @@ router.get('/:chatbotId/settings', async (req, res) => {
   try {
     const { chatbotId } = req.params;
     const result = await pool.query(
-      `SELECT persistent, api_key, llm_model, specifications, temperature
+      `SELECT persistent, api_key, llm_model, specifications, rejection_msg, temperature
        FROM chat_bots 
        WHERE chat_bot_id = $1`,
       [chatbotId]
@@ -175,15 +175,16 @@ router.get('/:chatbotId/settings', async (req, res) => {
 router.put('/:chatbotId/settings', async (req, res) => {
   try {
     const { chatbotId } = req.params;
-    const { persistent, api_key, llm_model, specifications, temperature } = req.body;
+    const { persistent, api_key, llm_model, specifications, rejection_msg, temperature } = req.body;
 
     await pool.query(
       `UPDATE chat_bots 
        SET persistent = $1, api_key = $2, llm_model = $3, 
            specifications = $4,
-           temperature = $5
-       WHERE chat_bot_id = $6`,
-      [persistent, api_key, llm_model, specifications, temperature, chatbotId]
+           rejection_msg = $5,
+           temperature = $6
+       WHERE chat_bot_id = $7`,
+      [persistent, api_key, llm_model, specifications, rejection_msg, temperature, chatbotId]
     );
     
     res.json({ message: 'Settings updated successfully' });

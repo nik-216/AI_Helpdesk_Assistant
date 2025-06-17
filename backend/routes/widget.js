@@ -59,12 +59,12 @@ async function searchSimilar(query, top_k = 10) {
 }
 
 // Python script to get reply from AI model
-async function getReply(model, messages, similarText, specifications, temperature) {
+async function getReply(model, messages, similarText, specifications, rejection_msg, temperature) {
   const options = {
     mode: 'text',
     pythonOptions: ['-u'],
     scriptPath: path.join(__dirname, '../python_scripts/LLM'),
-    args: [model, JSON.stringify(messages), JSON.stringify(similarText), specifications, temperature]
+    args: [model, JSON.stringify(messages), JSON.stringify(similarText), specifications, rejection_msg, temperature]
   };
 
   const result = await PythonShell.run('getReply.py', options);
@@ -75,29 +75,41 @@ async function getReply(model, messages, similarText, specifications, temperatur
 router.post('/chat', authenticateWidget, async (req, res) => {
   try {
     const { messages, ip } = req.body;
+    const { chatBot_id, llm_model } = req.chatBot;
+    let { chat_id } = req.chatBot;
+
     if (!messages || !ip) {
       return res.status(400).json({ error: 'Message and IP are required' });
+    }
+
+    if (!chat_id) {
+      const getChat_ID= await pool.query(
+        'INSERT INTO chats (chat_bot_id, ip_address) VALUES ($1, $2) RETURNING chat_id',
+        [chatBot_id, ip]
+      );
+
+      chat_id = getChat_ID.rows[0].chat_id;
     }
 
     await pool.query(
       `INSERT INTO chat_history 
        (chat_id, role, content)
        VALUES ($1, $2, $3)`,
-      [req.chatBot.chat_id, 'user', messages[messages.length - 1].content]
+      [chat_id, 'user', messages[messages.length - 1].content]
     );
 
     const result = await pool.query(
-      'SELECT specifications, temperature FROM chat_bots WHERE chat_bot_id = $1',
-      [req.chatBot.chatBot_id]
+      'SELECT specifications, rejection_msg, temperature FROM chat_bots WHERE chat_bot_id = $1',
+      [chatBot_id]
     );
 
     const similarText = await searchSimilar(messages[messages.length - 1].content);
-    console.log('Similar items found:', similarText);
-    console.log('Length of similar items:', similarText.length);
+    // console.log('Similar items found:', similarText);
+    // console.log('Length of similar items:', similarText.length);
 
-    const reply = await getReply(req.chatBot.llm_model, messages, similarText, result.rows[0].specifications, result.rows[0].temperature);
+    const reply = await getReply(llm_model, messages, similarText, result.rows[0].specifications, result.rows[0].rejection_msg, result.rows[0].temperature);
 
-    console.log('LLM reply:', reply);
+    // console.log('LLM reply:', reply);
 
     // const reply = "This is a sample response. Implement your AI logic here.";
 
@@ -121,8 +133,13 @@ router.post('/chat', authenticateWidget, async (req, res) => {
 router.post('/history', authenticateWidget, async (req, res) => {
   try {
     const { ip } = req.body;
+    const { chat_id } = req.chatBot;
     if (!ip) {
       return res.status(400).json({ error: 'IP is required' });
+    }
+
+    if (!chat_id) {
+      return res.json({ reply: '', messages: [] });
     }
 
     if (!req.chatBot.persistent) {

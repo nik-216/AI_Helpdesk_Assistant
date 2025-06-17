@@ -16,33 +16,38 @@ module.exports = async function authenticateWidget(req, res, next) {
       [apiKey]
     );
 
+    if (result.rows.length === 0) {
+      return res.status(403).json({ error: 'Invalid API key' });
+    }
+
     var getChat_ID = await pool.query(
       'SELECT chat_id FROM chats WHERE chat_bot_id = $1 AND ip_address = $2 LIMIT 1',
       [result.rows[0].chat_bot_id, ip]
     );
 
     if (getChat_ID.rows.length === 0) {
-      getChat_ID = await pool.query(
-        'INSERT INTO chats (chat_bot_id, ip_address) VALUES ($1, $2) RETURNING chat_id',
-        [result.rows[0].chat_bot_id, ip]
-      );
+      // getChat_ID = await pool.query(
+      //   'INSERT INTO chats (chat_bot_id, ip_address) VALUES ($1, $2) RETURNING chat_id',
+      //   [result.rows[0].chat_bot_id, ip]
+      // );
 
-    }
-
-    if (result.rows.length === 0) {
-      return res.status(403).json({ error: 'Invalid API key' });
-    }
-
-    // console.log('chat_id:', getChat_ID.rows[0]);
-
-    req.chatBot = {
+      req.chatBot = {
       chatBot_id: result.rows[0].chat_bot_id,
       persistent: result.rows[0].persistent,
-      llm_model: result.rows[0].llm_model,
-      chat_id: getChat_ID.rows[0].chat_id
-    };
+      llm_model: result.rows[0].llm_model
+      };
+      next();
+    }
+    else {
+      req.chatBot = {
+        chatBot_id: result.rows[0].chat_bot_id,
+        persistent: result.rows[0].persistent,
+        llm_model: result.rows[0].llm_model,
+        chat_id: getChat_ID.rows[0].chat_id
+      };
 
-    next();
+      next();
+    }
   } catch (err) {
     console.error('Widget auth error:', err);
     res.status(500).json({ error: 'Authentication failed' });
