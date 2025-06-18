@@ -546,7 +546,7 @@
   };
 
   // === Add messages to chat ===
-  // Enhanced message display function
+  // Enhanced message display function with read-aloud
   function addMessage(content, sender = 'user') {
     const messageContainer = document.createElement('div');
     messageContainer.style.display = 'flex';
@@ -582,14 +582,17 @@
     const messageTextContainer = document.createElement('div');
     
     // Handle both string and object messages
+    let messageText = '';
     if (typeof content === 'string') {
+      messageText = content;
       messageBubble.textContent = content;
     } else if (typeof content === 'object') {
       // Create message text
-      const messageText = document.createElement('div');
-      messageText.textContent = content.text || '';
-      messageText.style.marginBottom = content.details ? '8px' : '0';
-      messageBubble.appendChild(messageText);
+      const textElement = document.createElement('div');
+      messageText = content.text || '';
+      textElement.textContent = messageText;
+      textElement.style.marginBottom = content.details ? '8px' : '0';
+      messageBubble.appendChild(textElement);
       
       // Add details if present
       if (content.details && content.details.length) {
@@ -598,6 +601,7 @@
         detailsList.style.lineHeight = '1.4';
         
         content.details.forEach(detail => {
+          messageText += '\n• ' + detail;
           const detailItem = document.createElement('div');
           detailItem.style.display = 'flex';
           detailItem.style.alignItems = 'flex-start';
@@ -635,6 +639,88 @@
     messageBubble.style.wordBreak = 'break-word';
     messageBubble.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
 
+    // Add read aloud button for bot messages
+    if (sender === 'bot') {
+      const messageActions = document.createElement('div');
+      messageActions.style.display = 'flex';
+      messageActions.style.gap = '8px';
+      messageActions.style.marginTop = '8px';
+      messageActions.style.justifyContent = 'flex-end';
+      
+      // Create notification area (initially hidden)
+      const notificationArea = document.createElement('div');
+      notificationArea.style.display = 'none';
+      notificationArea.style.fontSize = '12px';
+      notificationArea.style.padding = '6px 8px';
+      notificationArea.style.borderRadius = '4px';
+      notificationArea.style.marginTop = '8px';
+      notificationArea.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+      notificationArea.style.color = config.botText;
+      notificationArea.style.transition = 'opacity 0.3s ease';
+      
+      const readAloudBtn = document.createElement('button');
+      readAloudBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 18v-6a9 9 0 0118 0v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span style="margin-left: 4px;">Read aloud</span>
+      `;
+      Object.assign(readAloudBtn.style, {
+        display: 'flex',
+        alignItems: 'center',
+        padding: '4px 8px',
+        backgroundColor: 'transparent',
+        color: config.botText,
+        border: `1px solid ${config.botText}`,
+        borderRadius: '4px',
+        fontSize: '12px',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+      });
+      
+      readAloudBtn.addEventListener('mouseenter', () => {
+        readAloudBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+      });
+      
+      readAloudBtn.addEventListener('mouseleave', () => {
+        readAloudBtn.style.backgroundColor = 'transparent';
+      });
+      
+      readAloudBtn.addEventListener('click', () => {
+        // Clear any existing notification
+        notificationArea.style.display = 'none';
+        
+        // Check if speech synthesis is supported
+        if (!window.speechSynthesis) {
+          showNotification(notificationArea, 
+            "Text-to-speech not supported in your browser", 
+            'error');
+          return;
+        }
+
+        // Check if voices are loaded
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length === 0) {
+          showNotification(notificationArea, 
+            "Loading voices... Please try again in a moment", 
+            'warning');
+          
+          // Some browsers need this event to load voices
+          window.speechSynthesis.onvoiceschanged = function() {
+            readMessageAloud(messageText, notificationArea);
+          };
+          return;
+        }
+
+        readMessageAloud(messageText, notificationArea);
+      });
+      
+      messageActions.appendChild(readAloudBtn);
+      messageBubble.appendChild(messageActions);
+      messageBubble.appendChild(notificationArea);
+    }
+
     messageContent.appendChild(name);
     messageContent.appendChild(messageBubble);
     messageContainer.appendChild(avatar);
@@ -642,6 +728,117 @@
 
     chatBody.appendChild(messageContainer);
     chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  // Helper function to show notifications
+  function showNotification(container, message, type = 'error') {
+    container.textContent = message;
+    container.style.display = 'block';
+    
+    // Style based on notification type
+    if (type === 'error') {
+      container.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+      container.style.color = '#ef4444';
+    } else if (type === 'warning') {
+      container.style.backgroundColor = 'rgba(234, 179, 8, 0.2)';
+      container.style.color = '#eab308';
+    } else {
+      container.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+    }
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      container.style.opacity = '0';
+      setTimeout(() => {
+        container.style.display = 'none';
+        container.style.opacity = '1';
+      }, 300);
+    }, 5000);
+  }
+
+  // === Read Aloud Functionality ===
+  function readMessageAloud(text, notificationArea) {
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    // Create a new utterance
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Configure voice settings
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    
+    // Try to find a natural-sounding voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoices = [
+      'Google UK English Female',
+      'Microsoft Zira - English (United States)',
+      'Alex',
+      'Samantha'
+    ];
+    
+    for (const voiceName of preferredVoices) {
+      const voice = voices.find(v => v.name === voiceName);
+      if (voice) {
+        utterance.voice = voice;
+        break;
+      }
+    }
+    
+    // If no preferred voice, use the first available English voice
+    if (!utterance.voice) {
+      const englishVoice = voices.find(v => v.lang.startsWith('en-'));
+      if (englishVoice) {
+        utterance.voice = englishVoice;
+      } else {
+        showNotification(notificationArea, 
+          "No English voice available", 
+          'error');
+        return;
+      }
+    }
+
+    // Speak the text
+    window.speechSynthesis.speak(utterance);
+    
+    // Handle events for better UX
+    utterance.onstart = () => {
+      showNotification(notificationArea, 
+        "Reading message...", 
+        'info');
+    };
+    
+    utterance.onend = () => {
+      showNotification(notificationArea, 
+        "Finished reading", 
+        'info');
+      setTimeout(() => {
+        notificationArea.style.display = 'none';
+      }, 2000);
+    };
+    
+    utterance.onerror = (event) => {
+      let errorMessage = "Error reading message";
+      if (event.error === 'interrupted') {
+        errorMessage = "Reading interrupted";
+      } else if (event.error === 'canceled') {
+        errorMessage = "Reading canceled";
+      } else if (event.error === 'synthesis-failed') {
+        errorMessage = "Failed to synthesize speech";
+      }
+      
+      showNotification(notificationArea, 
+        errorMessage, 
+        'error');
+    };
+  }
+
+  // Ensure voices are loaded (some browsers need this)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = function() {
+      // Voices are now loaded
+    };
   }
 
   // === Typing indicator ===
