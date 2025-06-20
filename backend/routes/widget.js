@@ -68,7 +68,8 @@ async function getReply(model, messages, similarText, specifications, rejection_
   };
 
   const result = await PythonShell.run('getReply.py', options);
-  return result[0];
+  // console.log("Result: ", result)
+  return result;
 }
 
 // Store conversation history
@@ -107,11 +108,28 @@ router.post('/chat', authenticateWidget, async (req, res) => {
     // console.log('Similar items found:', similarText);
     // console.log('Length of similar items:', similarText.length);
 
-    const reply = await getReply(llm_model, messages, similarText, result.rows[0].specifications, result.rows[0].rejection_msg, result.rows[0].temperature);
+    const replyResult = await getReply(llm_model, messages, similarText, result.rows[0].specifications, result.rows[0].rejection_msg, result.rows[0].temperature);
 
-    // console.log('LLM reply:', reply);
+    const fullResponse = replyResult.join('\n');
+    let reply;
+    let related_questions = [];
 
-    // const reply = "This is a sample response. Implement your AI logic here.";
+    try {
+      // Remove Markdown code fences and parse JSON
+      const jsonString = fullResponse.replace(/```json|```/g, '').trim();
+      const responseObj = JSON.parse(jsonString);
+      
+      // Format the response for the widget
+      reply = responseObj.answer;
+      
+      if (responseObj.related_questions && responseObj.related_questions.length > 0) {
+        related_questions = responseObj.related_questions.map((q) => `${q}`);
+      }
+    } catch (err) {
+      console.error('Failed to parse LLM response:', err);
+      // Fallback to raw response if parsing fails
+      reply = fullResponse.replace(/```json|```/g, '').trim();
+    }
 
     messages.push({ role: 'assistant', content: reply });
     
@@ -121,8 +139,13 @@ router.post('/chat', authenticateWidget, async (req, res) => {
        VALUES ($1, $2, $3)`,
       [req.chatBot.chat_id, 'assistant', reply]
     );
+    // console.log("Related question: ", related_questions)
 
-    res.json({ reply: reply, messages: [...messages, { role: 'assistant', content: reply }] });
+    res.json({ 
+      reply: reply, 
+      messages: [...messages, 
+        { role: 'assistant', content: reply }],
+      related_questions: related_questions });
   } catch (err) {
     console.error('Widget chat error:', err);
     res.status(500).json({ error: 'Chat processing failed' });
@@ -170,8 +193,6 @@ router.post('/history', authenticateWidget, async (req, res) => {
 router.delete('/clearChat', authenticateWidget, async (req, res) =>  {
   const { chat_id } = req.chatBot;
   const { ip } = req.body;
-
-  console.log('Chat_id: ', chat_id);
 
   if (!ip) {
     return res.status(400).json({ error: 'IP is required' });

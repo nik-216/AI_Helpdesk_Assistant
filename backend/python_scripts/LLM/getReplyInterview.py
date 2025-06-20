@@ -29,18 +29,7 @@ all_messages_for_api = []
 if rejection_msg == '':
     rejection_msg = '''"I'm sorry, but I'm not able to assist with that request. Please feel free to ask something else, and I'll do my best to help!"'''
 
-# system_msg = '''You are a helpful chatbot that answers questions using ONLY the information provided in the knowledge base. Use a polite and informational tone.
-
-# When answering:
-# 1. First analyze if the knowledge base contains relevant information
-# 2. If relevant information exists, synthesize a concise answer using ONLY that information
-# 3. If no relevant information exists, respond: "I'm sorry, but I'm not able to assist with that request. Please feel free to ask something else, and I'll do my best to help!"
-
-# Knowledge base content will be marked with triple backticks (```) and the Question to be answered will be marked with astrik (*).
-
-# NEVER make up information or speculate beyond what's in the knowledge base.'''
-
-system_msg = '''You are a helpful assistant that provides accurate answers using ONLY the information in the knowledge base. Maintain a professional yet approachable tone.
+system_msg = '''You are a helpful interview preparation assistant that provides interview tips and guidelines using ONLY the information in the knowledge base. Maintain a professional yet approachable tone. You are to also judge the tone if the user is doing a mock interview.
 
 Guidelines:
 1. Carefully review the knowledge base content (marked with ```) for information relevant to the question (marked with *)
@@ -60,8 +49,6 @@ Output:
 - For the answer, generate an answer for the user query
 - For the related_questions, generate 3 related user queries
 '''
-
-
 
 # Function to format messages as required by OpenAI
 def OPNEAI_format_msgs(messages, all_messages_for_api):

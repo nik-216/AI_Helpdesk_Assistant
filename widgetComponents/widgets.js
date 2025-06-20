@@ -25,6 +25,17 @@
   let recognition; // For speech recognition
   let isListening = false; // Track recording state
 
+  const style = document.createElement('style');
+  style.textContent = `
+      .related-question:hover {
+          background: rgba(255, 255, 255, 0.1);
+      }
+      .related-question {
+          transition: background 0.2s ease;
+      }
+  `;
+  document.head.appendChild(style);
+
   // Get client IP (using a free IP API)
   async function getClientIP() {
     try {
@@ -327,7 +338,6 @@
       recognition.interimResults = false;
       recognition.lang = 'en-US';
 
-      // Network timeout (5 seconds)
       let networkTimeout;
 
       recognition.onstart = () => {
@@ -548,7 +558,8 @@
   // === Add messages to chat ===
   // Enhanced message display function with read-aloud
   function addMessage(content, sender = 'user') {
-    const messageContainer = document.createElement('div');
+    
+  const messageContainer = document.createElement('div');
     messageContainer.style.display = 'flex';
     messageContainer.style.flexDirection = sender === 'user' ? 'row-reverse' : 'row';
     messageContainer.style.gap = '8px';
@@ -579,57 +590,70 @@
     name.style.marginBottom = '4px';
 
     const messageBubble = document.createElement('div');
-    const messageTextContainer = document.createElement('div');
     
     // Handle both string and object messages
     let messageText = '';
     if (typeof content === 'string') {
-      messageText = content;
-      messageBubble.textContent = content;
+        messageText = content;
+        messageBubble.textContent = content;
     } else if (typeof content === 'object') {
-      // Create message text
-      const textElement = document.createElement('div');
-      messageText = content.text || '';
-      textElement.textContent = messageText;
-      textElement.style.marginBottom = content.details ? '8px' : '0';
-      messageBubble.appendChild(textElement);
-      
-      // Add details if present
-      if (content.details && content.details.length) {
-        const detailsList = document.createElement('div');
-        detailsList.style.fontSize = '13px';
-        detailsList.style.lineHeight = '1.4';
-        
-        content.details.forEach(detail => {
-          messageText += '\n• ' + detail;
-          const detailItem = document.createElement('div');
-          detailItem.style.display = 'flex';
-          detailItem.style.alignItems = 'flex-start';
-          detailItem.style.gap = '6px';
-          detailItem.style.marginBottom = '4px';
-          
-          const bullet = document.createElement('div');
-          bullet.textContent = '•';
-          bullet.style.flexShrink = '0';
-          
-          const text = document.createElement('div');
-          text.textContent = detail;
-          
-          detailItem.appendChild(bullet);
-          detailItem.appendChild(text);
-          detailsList.appendChild(detailItem);
-        });
-        
-        messageBubble.appendChild(detailsList);
-      }
-      
-      // Add action button if present
-      if (content.action) {
-        const actionContainer = document.createElement('div');
-        actionContainer.style.marginTop = '8px';
-        actionContainer.appendChild(content.action);
-        messageBubble.appendChild(actionContainer);
-      }
+        // Create message text
+        const textElement = document.createElement('div');
+        messageText = content.text || '';
+        textElement.textContent = messageText;
+        messageBubble.appendChild(textElement);
+
+        // Add related questions if they exist
+        if (content.relatedQuestions && content.relatedQuestions.length > 0) {
+            const questionsContainer = document.createElement('div');
+            questionsContainer.style.marginTop = '12px';
+            questionsContainer.style.paddingTop = '8px';
+            questionsContainer.style.borderTop = `1px solid ${config.botText}20`; // Semi-transparent
+            
+            const questionsTitle = document.createElement('div');
+            questionsTitle.textContent = 'Related questions:';
+            questionsTitle.style.fontSize = '12px';
+            questionsTitle.style.marginBottom = '6px';
+            questionsTitle.style.color = config.botText;
+            questionsContainer.appendChild(questionsTitle);
+            
+            const questionsList = document.createElement('div');
+            questionsList.style.display = 'flex';
+            questionsList.style.flexDirection = 'column';
+            questionsList.style.gap = '4px';
+            
+            content.relatedQuestions.forEach((question, index) => {
+                const questionItem = document.createElement('button');
+                questionItem.textContent = question;
+                questionItem.style.textAlign = 'left';
+                questionItem.style.padding = '4px 8px';
+                questionItem.style.borderRadius = '4px';
+                questionItem.style.border = 'none';
+                questionItem.style.background = 'transparent';
+                questionItem.style.color = config.botText;
+                questionItem.style.cursor = 'pointer';
+                questionItem.style.fontSize = '12px';
+                questionItem.style.transition = 'background 0.2s';
+                
+                questionItem.addEventListener('mouseenter', () => {
+                    questionItem.style.background = `${config.botText}20`;
+                });
+                
+                questionItem.addEventListener('mouseleave', () => {
+                    questionItem.style.background = 'transparent';
+                });
+                
+                questionItem.addEventListener('click', () => {
+                    input.value = question;
+                    input.focus();
+                });
+                
+                questionsList.appendChild(questionItem);
+            });
+            
+            questionsContainer.appendChild(questionsList);
+            messageBubble.appendChild(questionsContainer);
+        }
     }
 
     messageBubble.style.padding = '10px 14px';
@@ -834,7 +858,7 @@
     };
   }
 
-  // Ensure voices are loaded (some browsers need this)
+  // Ensure voices are loaded 
   if (window.speechSynthesis) {
     window.speechSynthesis.onvoiceschanged = function() {
       // Voices are now loaded
@@ -936,7 +960,11 @@
       })
       .then((data) => {
         hideTypingIndicator();
-        addMessage(data.reply || 'Hi! How can I help you today?', 'bot');
+        const botMessage = {
+            text: data.reply || 'Hi! How can I help you today?',
+            relatedQuestions: data.related_questions || []
+        };
+        addMessage(botMessage, 'bot');
         messages.push({ role: 'assistant', content: data.reply });
       })
       .catch((err) => {

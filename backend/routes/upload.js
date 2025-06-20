@@ -63,7 +63,6 @@ async function scrapeText(url) {
   };
   
   const result = await PythonShell.run('scrape.py', options);
-  console.log("Chunks:", result[0])
   return result[0];
 }
 
