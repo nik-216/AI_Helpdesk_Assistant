@@ -6,7 +6,6 @@ import json
 import ast
 
 from openai import OpenAI
-from google import genai
 
 load_dotenv()
 
@@ -20,26 +19,12 @@ rejection_msg = sys.argv[5]
 temp = float(sys.argv[6])
 
 # Get all the api keys
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-DEEPSEEK_API_KEY = os.getenv("OPENROUTER_KEY")
-GEMINI_1_5_API_KEY = os.getenv("GEMINI_1_5_API_KEY")
-GEMINI_2_5_API_KEY = os.getenv("OPENROUTER_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_KEY")
 
 all_messages_for_api = []
 
 if rejection_msg == '':
     rejection_msg = '''"I'm sorry, but I'm not able to assist with that request. Please feel free to ask something else, and I'll do my best to help!"'''
-
-# system_msg = '''You are a helpful chatbot that answers questions using ONLY the information provided in the knowledge base. Use a polite and informational tone.
-
-# When answering:
-# 1. First analyze if the knowledge base contains relevant information
-# 2. If relevant information exists, synthesize a concise answer using ONLY that information
-# 3. If no relevant information exists, respond: "I'm sorry, but I'm not able to assist with that request. Please feel free to ask something else, and I'll do my best to help!"
-
-# Knowledge base content will be marked with triple backticks (```) and the Question to be answered will be marked with astrik (*).
-
-# NEVER make up information or speculate beyond what's in the knowledge base.'''
 
 system_msg = '''You are a helpful assistant that provides accurate answers using ONLY the information in the knowledge base. Maintain a professional yet approachable tone.
 
@@ -62,8 +47,6 @@ Output:
 - For the related_questions, generate 3 related user queries
 '''
 
-
-
 # Function to format messages as required by OpenAI
 def OPENAI_format_msgs(messages, all_messages_for_api):
     # Initialize with system message
@@ -84,34 +67,6 @@ def OPENAI_format_msgs(messages, all_messages_for_api):
         if last_msg['role'] == 'user':
             last_msg['content'] = "Question:" + "*" + last_msg['content'] + "*" + "\n\nKnowledge Base:" + "```" + similar_text + "```"
 
-# Function to format messages according to input required by gemini
-def GOOGLE_format_msgs(messages, all_messages_for_api):
-    gemini_initial_user_content = system_msg
-
-    if specifications:
-        gemini_initial_user_content += "\n\n" + specifications
-
-    all_messages_for_api.append({
-        'role': 'user',
-        'parts': [{'text': gemini_initial_user_content + "\n\n" + messages[0]['content']}]
-    })
-
-    for i, msg in enumerate(messages[1:]):
-        role = 'user' if msg['role'] == 'user' else 'model'
-        all_messages_for_api.append({
-            'role': role,
-            'parts': [{'text': msg['content']}]
-        })
-
-    if all_messages_for_api[-1]['role'] == 'user':
-        all_messages_for_api[-1]['parts'][0]['text'] += "\n\n" + "Question:" + "*" + messages[-1]['content'] + "*" + "Knowledge Base:" + "```" + similar_text + "```"
-    else:
-        all_messages_for_api.append({
-            'role': 'user',
-            'parts': [{'text': "Question:" + "*" + messages[-1]['content'] + "*" + "Knowledge Base:" + "```" + similar_text + "```"}]
-        })
-
-
 # Function to get reply from OpenAI
 def OPENAI_get_completion_from_messages(client, messages, model=model, temperature=temp):
     response = client.chat.completions.create(
@@ -123,34 +78,21 @@ def OPENAI_get_completion_from_messages(client, messages, model=model, temperatu
     # Return just the content which should be JSON
     return response.choices[0].message.content
 
-# Function to get reply from Google
-def GOOGLE_get_completion_from_messages(client, messages, model=model, temperature=temp):
-    response = client.models.generate_content(
-        model = model,
-        contents = messages
-    )
-    return response.text
-
 try :
-    if model == 'gpt-3.5-turbo': 
-        OPENAI_format_msgs(messages, all_messages_for_api)
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        print(OPENAI_get_completion_from_messages(client, all_messages_for_api))
+    client = OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
+    OPENAI_format_msgs(messages, all_messages_for_api)
+    
+    if model == 'gpt-4o': 
+        print(OPENAI_get_completion_from_messages(client, all_messages_for_api, "openai/chatgpt-4o-latest"))
 
     elif model == 'deepseek-chat':
-        OPENAI_format_msgs(messages, all_messages_for_api)
-        client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://openrouter.ai/api/v1")
         print(OPENAI_get_completion_from_messages(client, all_messages_for_api,"deepseek/deepseek-chat-v3-0324:free"))
 
     elif model == 'gemini-1.5-flash':
-        GOOGLE_format_msgs(messages, all_messages_for_api)
-        client = genai.Client(api_key=GEMINI_1_5_API_KEY)
-        print(GOOGLE_get_completion_from_messages(client, all_messages_for_api))
+        print(OPENAI_get_completion_from_messages(client, all_messages_for_api, "google/gemini-flash-1.5"))
         
-    elif model == 'gemini-2.5-pro':
-        GOOGLE_format_msgs(messages, all_messages_for_api)
-        client = genai.Client(api_key=GEMINI_2_5_API_KEY)
-        print(GOOGLE_get_completion_from_messages(client, all_messages_for_api))
+    elif model == 'gemini-2.0-flash':
+        print(OPENAI_get_completion_from_messages(client, all_messages_for_api, "google/gemini-2.0-flash-001"))
         
 except Exception as e:
     error_response = {

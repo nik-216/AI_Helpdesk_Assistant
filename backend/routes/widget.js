@@ -67,7 +67,9 @@ async function getReply(model, messages, similarText, specifications, rejection_
     args: [model, JSON.stringify(messages), JSON.stringify(similarText), specifications, rejection_msg, temperature]
   };
 
-  const result = await PythonShell.run('getReply.py', options);
+  // const result = await PythonShell.run('getReplyOpenRouter.py', options);
+  const result = await PythonShell.run('getReplyInterview.py', options);
+  
   // console.log("Result: ", result)
   return result;
 }
@@ -115,6 +117,7 @@ router.post('/chat', authenticateWidget, async (req, res) => {
     let related_questions = [];
 
     try {
+      console.log(fullResponse);
       // Remove Markdown code fences and parse JSON
       const jsonString = fullResponse.replace(/```json|```/g, '').trim();
       const responseObj = JSON.parse(jsonString);

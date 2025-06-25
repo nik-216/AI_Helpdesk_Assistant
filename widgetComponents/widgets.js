@@ -3,7 +3,7 @@
   const widgetContainer = document.getElementById('chat-widget') || document.body;
   const apiKey = widgetContainer.dataset.apiKey;
 
-  // Configuration
+  // Configurations
   const config = {
     apiKey: apiKey,
     rootUrl: 'http://localhost:8080/api/widget',
@@ -22,8 +22,8 @@
   config.clearChatUrl = config.rootUrl + '/clearChat'
 
   const messages = [];
-  let recognition; // For speech recognition
-  let isListening = false; // Track recording state
+  let recognition; 
+  let isListening = false;
 
   const style = document.createElement('style');
   style.textContent = `
@@ -48,7 +48,6 @@
     }
   }
 
-  // === Modified message handling ===
   let clientIP = 'unknown-ip';
 
   // Initialize widget and get IP
@@ -57,7 +56,7 @@
     loadChatHistory();
   }
 
-  // Load previous chat history
+  // Load chat history
   async function loadChatHistory() {
     try {
       const response = await fetch(config.historyUrl, {
@@ -555,11 +554,23 @@
     }
   };
 
+  function renderMarkdown(content) {
+    // If content is an object with an 'answer' property, use that
+    const text = typeof content === 'string' ? content : 
+                (content.answer || content.text || JSON.stringify(content));
+    
+    // Simple markdown to HTML conversion
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // bold
+      .replace(/\*(.*?)\*/g, '<em>$1</em>') // italic
+      .replace(/\n/g, '<br>') // line breaks
+      .replace(/^\d+\.\s+(.*?)(<br>|$)/gm, '<li>$1</li>'); // numbered lists
+  }
+
   // === Add messages to chat ===
   // Enhanced message display function with read-aloud
   function addMessage(content, sender = 'user') {
-    
-  const messageContainer = document.createElement('div');
+    const messageContainer = document.createElement('div');
     messageContainer.style.display = 'flex';
     messageContainer.style.flexDirection = sender === 'user' ? 'row-reverse' : 'row';
     messageContainer.style.gap = '8px';
@@ -593,67 +604,70 @@
     
     // Handle both string and object messages
     let messageText = '';
+    let relatedQuestions = [];
+    
     if (typeof content === 'string') {
-        messageText = content;
-        messageBubble.textContent = content;
+      messageText = content;
+      messageBubble.innerHTML = renderMarkdown(content);
     } else if (typeof content === 'object') {
-        // Create message text
-        const textElement = document.createElement('div');
-        messageText = content.text || '';
-        textElement.textContent = messageText;
-        messageBubble.appendChild(textElement);
+      messageText = content.answer || content.text || '';
+      relatedQuestions = content.related_questions || content.relatedQuestions || [];
+      
+      if (messageText) {
+        messageBubble.innerHTML = renderMarkdown(messageText);
+      }
 
-        // Add related questions if they exist
-        if (content.relatedQuestions && content.relatedQuestions.length > 0) {
-            const questionsContainer = document.createElement('div');
-            questionsContainer.style.marginTop = '12px';
-            questionsContainer.style.paddingTop = '8px';
-            questionsContainer.style.borderTop = `1px solid ${config.botText}20`; // Semi-transparent
-            
-            const questionsTitle = document.createElement('div');
-            questionsTitle.textContent = 'Related questions:';
-            questionsTitle.style.fontSize = '12px';
-            questionsTitle.style.marginBottom = '6px';
-            questionsTitle.style.color = config.botText;
-            questionsContainer.appendChild(questionsTitle);
-            
-            const questionsList = document.createElement('div');
-            questionsList.style.display = 'flex';
-            questionsList.style.flexDirection = 'column';
-            questionsList.style.gap = '4px';
-            
-            content.relatedQuestions.forEach((question, index) => {
-                const questionItem = document.createElement('button');
-                questionItem.textContent = question;
-                questionItem.style.textAlign = 'left';
-                questionItem.style.padding = '4px 8px';
-                questionItem.style.borderRadius = '4px';
-                questionItem.style.border = 'none';
-                questionItem.style.background = 'transparent';
-                questionItem.style.color = config.botText;
-                questionItem.style.cursor = 'pointer';
-                questionItem.style.fontSize = '12px';
-                questionItem.style.transition = 'background 0.2s';
-                
-                questionItem.addEventListener('mouseenter', () => {
-                    questionItem.style.background = `${config.botText}20`;
-                });
-                
-                questionItem.addEventListener('mouseleave', () => {
-                    questionItem.style.background = 'transparent';
-                });
-                
-                questionItem.addEventListener('click', () => {
-                    input.value = question;
-                    input.focus();
-                });
-                
-                questionsList.appendChild(questionItem);
-            });
-            
-            questionsContainer.appendChild(questionsList);
-            messageBubble.appendChild(questionsContainer);
-        }
+      // Add related questions if they exist
+      if (relatedQuestions.length > 0) {
+        const questionsContainer = document.createElement('div');
+        questionsContainer.style.marginTop = '12px';
+        questionsContainer.style.paddingTop = '8px';
+        questionsContainer.style.borderTop = `1px solid ${config.botText}20`;
+        
+        const questionsTitle = document.createElement('div');
+        questionsTitle.textContent = 'Related questions:';
+        questionsTitle.style.fontSize = '12px';
+        questionsTitle.style.marginBottom = '6px';
+        questionsTitle.style.color = config.botText;
+        
+        const questionsList = document.createElement('div');
+        questionsList.style.display = 'flex';
+        questionsList.style.flexDirection = 'column';
+        questionsList.style.gap = '4px';
+        
+        relatedQuestions.forEach(question => {
+          const questionItem = document.createElement('button');
+          questionItem.textContent = question;
+          questionItem.style.textAlign = 'left';
+          questionItem.style.padding = '4px 8px';
+          questionItem.style.borderRadius = '4px';
+          questionItem.style.border = 'none';
+          questionItem.style.background = 'transparent';
+          questionItem.style.color = config.botText;
+          questionItem.style.cursor = 'pointer';
+          questionItem.style.fontSize = '12px';
+          questionItem.style.transition = 'background 0.2s';
+          
+          questionItem.addEventListener('mouseenter', () => {
+            questionItem.style.background = `${config.botText}20`;
+          });
+          
+          questionItem.addEventListener('mouseleave', () => {
+            questionItem.style.background = 'transparent';
+          });
+          
+          questionItem.addEventListener('click', () => {
+            input.value = question;
+            input.focus();
+          });
+          
+          questionsList.appendChild(questionItem);
+        });
+        
+        questionsContainer.appendChild(questionsTitle);
+        questionsContainer.appendChild(questionsList);
+        messageBubble.appendChild(questionsContainer);
+      }
     }
 
     messageBubble.style.padding = '10px 14px';
@@ -671,7 +685,6 @@
       messageActions.style.marginTop = '8px';
       messageActions.style.justifyContent = 'flex-end';
       
-      // Create notification area (initially hidden)
       const notificationArea = document.createElement('div');
       notificationArea.style.display = 'none';
       notificationArea.style.fontSize = '12px';
@@ -712,10 +725,8 @@
       });
       
       readAloudBtn.addEventListener('click', () => {
-        // Clear any existing notification
         notificationArea.style.display = 'none';
         
-        // Check if speech synthesis is supported
         if (!window.speechSynthesis) {
           showNotification(notificationArea, 
             "Text-to-speech not supported in your browser", 
@@ -723,14 +734,12 @@
           return;
         }
 
-        // Check if voices are loaded
         const voices = window.speechSynthesis.getVoices();
         if (voices.length === 0) {
           showNotification(notificationArea, 
             "Loading voices... Please try again in a moment", 
             'warning');
           
-          // Some browsers need this event to load voices
           window.speechSynthesis.onvoiceschanged = function() {
             readMessageAloud(messageText, notificationArea);
           };

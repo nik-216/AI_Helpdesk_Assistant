@@ -6,7 +6,6 @@ import json
 import ast
 
 from openai import OpenAI
-from google import genai
 
 load_dotenv()
 
@@ -20,112 +19,111 @@ rejection_msg = sys.argv[5]
 temp = float(sys.argv[6])
 
 # Get all the api keys
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_KEY")
 
 all_messages_for_api = []
 
 if rejection_msg == '':
     rejection_msg = '''"I'm sorry, but I'm not able to assist with that request. Please feel free to ask something else, and I'll do my best to help!"'''
 
-system_msg = '''You are a helpful interview preparation assistant that provides interview tips and guidelines using ONLY the information in the knowledge base. Maintain a professional yet approachable tone. You are to also judge the tone if the user is doing a mock interview.
+system_msg = '''You are an expert interview coach that provides tailored advice to job candidates using ONLY the information provided in the knowledge base. Maintain a professional yet supportive tone that builds candidate confidence.
 
-Guidelines:
-1. Carefully review the knowledge base content (marked with ```) for information relevant to the question (marked with *)
-2. If relevant information exists, provide a clear, concise response using ONLY that content
-3. If the knowledge base doesn't contain relevant information, respond: 
-''' + rejection_msg + '''
+Core Responsibilities:
+1. Mock Interview Analysis (when applicable):
+   - Evaluate both content AND delivery (tone, clarity, structure)
+   - Provide specific, actionable feedback using the STAR method (Situation, Task, Action, Result)
+   - Highlight strengths and 1-2 areas for improvement
 
-Important rules:
-- NEVER invent information or speculate beyond the provided knowledge base
-- Never begin responses with "Based on the provided text" or similar phrases
-- Always keep answers focused and directly responsive to the question
-- Use markdown formatting when appropriate for clarity (lists, bold, etc.)
-- If citing specific details, implicitly reference them without explicit attribution
+2. Knowledge Base Usage:
+   - ```Knowledge Base``` contains verified interview techniques, company insights, and role-specific guidance
+   - *User Questions* indicate where to focus your response
+   - If no relevant information exists, respond: ''' + rejection_msg + '''
+   
+Response Requirements:
+- Format: Strict JSON with {"answer":"","related_questions":[]} structure
+- Content: Must derive exclusively from knowledge base
+- Style: Professional but approachable (like a senior career counselor)
 
-Output:
-- Generate it in a JSON format with the keys being answer and related_questions.
-- For the answer, generate an answer for the user query
-- For the related_questions, generate 3 related user queries
+Quality Standards:
+DO:
+- Use markdown formatting (bullet points, **bold** key concepts)
+- Structure longer responses with clear sections
+- Suggest 3 related questions that probe deeper into the topic
+- For mock interviews: comment on both what was said AND how it was delivered
+
+DON'T:
+- Speculate beyond the knowledge base
+- Use hedge phrases ("Based on the text...")
+- Overwhelm with more than 2 improvement points at once
+- Include personal opinions or unverified information
+
+Output Format Example:
+```json
+{
+  "answer": "**Strengths**: Your answer demonstrated good structure using the STAR method.\n\n**Areas to Improve**: \n- Quantify achievements more (e.g., 'increased sales by 30%')\n- Maintain more consistent eye contact\n\n**Tip**: For leadership roles, emphasize team-building examples.",
+  "related_questions": [
+    "How should I structure answers for behavioral interviews?",
+    "What metrics do hiring managers value most?",
+    "How to maintain confident body language during video interviews?"
+  ]
+}
 '''
 
 # Function to format messages as required by OpenAI
-def OPNEAI_format_msgs(messages, all_messages_for_api):
-    # Add all the nesessary prompts to the messages
-    all_messages_for_api = [{'role': 'system', 'content': system_msg}]
+def OPENAI_format_msgs(messages, all_messages_for_api):
+    # Initialize with system message
+    all_messages_for_api.clear()
+    all_messages_for_api.append({'role': 'system', 'content': system_msg})
 
+    # Add specifications if they exist
     if specifications: 
-        all_messages_for_api.extend([{'role': 'system', 'content': specifications}])
+        all_messages_for_api.append({'role': 'system', 'content': specifications})
         
+    # Add conversation history
     if messages:
         all_messages_for_api.extend(messages)
-    all_messages_for_api[-1]['content'] = "Question:" + "*" + all_messages_for_api[-1]['content'] + "*" + "Knowledge Base:" + "```" + similar_text + "```"
-
-# Function to format messages according to input required by gemini
-def GOOGLE_format_msgs(messages, all_messages_for_api):
-    gemini_initial_user_content = system_msg
-
-    if specifications:
-        gemini_initial_user_content += "\n\n" + specifications
-
-    all_messages_for_api.append({
-        'role': 'user',
-        'parts': [{'text': gemini_initial_user_content + "\n\n" + messages[0]['content']}]
-    })
-
-    for i, msg in enumerate(messages[1:]):
-        role = 'user' if msg['role'] == 'user' else 'model'
-        all_messages_for_api.append({
-            'role': role,
-            'parts': [{'text': msg['content']}]
-        })
-
-    if all_messages_for_api[-1]['role'] == 'user':
-        all_messages_for_api[-1]['parts'][0]['text'] += "\n\n" + "Question:" + "*" + messages[-1]['content'] + "*" + "Knowledge Base:" + "```" + similar_text + "```"
-    else:
-        all_messages_for_api.append({
-            'role': 'user',
-            'parts': [{'text': "Question:" + "*" + messages[-1]['content'] + "*" + "Knowledge Base:" + "```" + similar_text + "```"}]
-        })
-
+    
+    # Format the last user message with knowledge base
+    if all_messages_for_api:
+        last_msg = all_messages_for_api[-1]
+        if last_msg['role'] == 'user':
+            last_msg['content'] = "Question:" + "*" + last_msg['content'] + "*" + "\n\nKnowledge Base:" + "```" + similar_text + "```"
 
 # Function to get reply from OpenAI
 def OPENAI_get_completion_from_messages(client, messages, model=model, temperature=temp):
     response = client.chat.completions.create(
-        model = model,
-        messages = messages,
-        temperature = temperature
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        response_format={"type": "json_object"} 
     )
-    return response.choices[0].message
-
-# Function to get reply from Google
-def GOOGLE_get_completion_from_messages(client, messages, model=model, temperature=temp):
-    response = client.models.generate_content(
-        model = model,
-        contents = messages
-    )
-    return response.text
+    # Return just the content which should be JSON
+    return response.choices[0].message.content
 
 try :
-    if model == 'gpt-3.5-turbo': 
-        OPNEAI_format_msgs(messages, all_messages_for_api)
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        print(OPENAI_get_completion_from_messages(client, all_messages_for_api))
+    client = OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
+    OPENAI_format_msgs(messages, all_messages_for_api)
+    
+    if model == 'gpt-4o': 
+        print(OPENAI_get_completion_from_messages(client, all_messages_for_api, "openai/chatgpt-4o-latest"))
 
     elif model == 'deepseek-chat':
-        OPNEAI_format_msgs(messages, all_messages_for_api)
-        client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
-        print(OPENAI_get_completion_from_messages(client, all_messages_for_api))
+        print(OPENAI_get_completion_from_messages(client, all_messages_for_api,"deepseek/deepseek-chat-v3-0324:free"))
 
     elif model == 'gemini-1.5-flash':
-        GOOGLE_format_msgs(messages, all_messages_for_api)
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        print(GOOGLE_get_completion_from_messages(client, all_messages_for_api))
+        print(OPENAI_get_completion_from_messages(client, all_messages_for_api, "google/gemini-flash-1.5"))
+        
+    elif model == 'gemini-2.0-flash':
+        print(OPENAI_get_completion_from_messages(client, all_messages_for_api, "google/gemini-2.0-flash-001"))
         
 except Exception as e:
     error_response = {
         "answer": rejection_msg,
-        "related_questions": []
+        "related_questions": [],
+        "error": {
+            "type": type(e).__name__,
+            "message": str(e),
+            "args": e.args if hasattr(e, 'args') else []
+        }
     }
     print(json.dumps(error_response))

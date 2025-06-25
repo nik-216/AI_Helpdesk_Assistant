@@ -1,3 +1,4 @@
+const { and } = require('sequelize');
 const { pool } = require('../database/db');
 
 module.exports = async function authenticateWidget(req, res, next) {
@@ -21,11 +22,11 @@ module.exports = async function authenticateWidget(req, res, next) {
     }
 
     var getChat_ID = await pool.query(
-      'SELECT chat_id FROM chats WHERE chat_bot_id = $1 AND ip_address = $2 LIMIT 1',
+      'SELECT chat_id FROM chats WHERE chat_bot_id = $1 AND ip_address = $2 ORDER BY created_at DESC LIMIT 1',
       [result.rows[0].chat_bot_id, ip]
     );
 
-    if (getChat_ID.rows.length === 0) {
+    if ((getChat_ID.rows.length === 0) && (!result.rows[0].persistent)) {
       // getChat_ID = await pool.query(
       //   'INSERT INTO chats (chat_bot_id, ip_address) VALUES ($1, $2) RETURNING chat_id',
       //   [result.rows[0].chat_bot_id, ip]
