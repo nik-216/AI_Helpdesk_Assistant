@@ -9,7 +9,6 @@ from openai import OpenAI
 
 load_dotenv()
 
-
 # Get the arguments
 model = sys.argv[1]
 messages = ast.literal_eval(sys.argv[2])
@@ -17,6 +16,14 @@ similar_text = sys.argv[3]
 specifications = sys.argv[4]
 rejection_msg = sys.argv[5]
 temp = float(sys.argv[6])
+
+# Model mapping for cleaner code
+MODEL_MAPPING = {
+    'gpt-4o': "openai/chatgpt-4o-latest",
+    'deepseek-chat': "deepseek/deepseek-chat-v3-0324:free",
+    'gemini-1.5-flash': "google/gemini-flash-1.5",
+    'gemini-2.0-flash': "google/gemini-2.0-flash-001"
+}
 
 # Get all the api keys
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_KEY")
@@ -100,21 +107,15 @@ def OPENAI_get_completion_from_messages(client, messages, model=model, temperatu
     # Return just the content which should be JSON
     return response.choices[0].message.content
 
-try :
+try:
     client = OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
     OPENAI_format_msgs(messages, all_messages_for_api)
     
-    if model == 'gpt-4o': 
-        print(OPENAI_get_completion_from_messages(client, all_messages_for_api, "openai/chatgpt-4o-latest"))
-
-    elif model == 'deepseek-chat':
-        print(OPENAI_get_completion_from_messages(client, all_messages_for_api,"deepseek/deepseek-chat-v3-0324:free"))
-
-    elif model == 'gemini-1.5-flash':
-        print(OPENAI_get_completion_from_messages(client, all_messages_for_api, "google/gemini-flash-1.5"))
-        
-    elif model == 'gemini-2.0-flash':
-        print(OPENAI_get_completion_from_messages(client, all_messages_for_api, "google/gemini-2.0-flash-001"))
+    api_model = MODEL_MAPPING.get(model)
+    if api_model:
+        print(OPENAI_get_completion_from_messages(client, all_messages_for_api, api_model))
+    else:
+        raise ValueError(f"Unsupported model: {model}")
         
 except Exception as e:
     error_response = {
