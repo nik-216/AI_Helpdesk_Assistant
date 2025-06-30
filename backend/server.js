@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { pool } = require('./database/db');
+const { pool } = require('./database/postgres_db');
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
 const chatbotRoutes = require('./routes/chatbots'); 

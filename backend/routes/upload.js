@@ -7,7 +7,7 @@ const pdf = require('pdf-parse');
 const mammoth = require('mammoth');
 const { PythonShell } = require('python-shell');
 
-const { pool } = require('../database/db');
+const { pool } = require('../database/postgres_db');
 const authenticate = require('../middlewares/auth');
 const { pipeline } = require('@xenova/transformers');
 

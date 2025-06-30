@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { pool } = require('../database/db');
+const { pool } = require('../database/postgres_db');
 const authenticateWidget = require('../middlewares/WidgetAuth');
 
 const path = require('path');
