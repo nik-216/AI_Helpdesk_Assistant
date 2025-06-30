@@ -18,11 +18,11 @@ pool.connect()
   })
   .catch(err => {
     console.error('❌ Database connection failed:', err.message);
-    process.exit(1); // Exit if we can't connect to DB
+    process.exit(1); 
   });
 
 // Export the pool directly
 module.exports = {
-  pool,  // Export the pool directly
+  pool,  
   query: (text, params) => pool.query(text, params),
 };

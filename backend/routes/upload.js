@@ -143,18 +143,6 @@ async function generateEmbeddings(chunks) {
   }
 }
 
-// async function generateEmbeddings(chunks) {
-//   const options = {
-//     mode: 'text',
-//     pythonOptions: ['-u'],
-//     scriptPath: path.join(__dirname, '../python_scripts'),
-//     args: [chunks]
-//   };
-  
-//   const result = await PythonShell.run('generateEmbeddings.py', options);
-//   return result[0];
-// }
-
 // Store the generated embeddings into the database
 async function storeEmbeddings(userId, source, chunks, embeddings, chatbotId) {
   const client = await pool.connect(); // Use the imported pool

@@ -13,7 +13,6 @@ const { pipeline } = require('@xenova/transformers');
 let embedder;
 async function generateEmbeddings(chunks) {
   try {
-    // Lazy load the model
     if (!embedder) {
       embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
     }
@@ -31,18 +30,6 @@ async function generateEmbeddings(chunks) {
     throw new Error('Failed to generate embeddings');
   }
 }
-
-// async function generateEmbeddings(chunks) {
-//   const options = {
-//     mode: 'text',
-//     pythonOptions: ['-u'],
-//     scriptPath: path.join(__dirname, '../python_scripts'),
-//     args: [chunks]
-//   };
-  
-//   const result = await PythonShell.run('generateEmbeddings.py', options);
-//   return result[0];
-// }
 
 // Python script for searching similar embeddings
 async function searchSimilar(query, top_k = 10) {

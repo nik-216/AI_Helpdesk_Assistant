@@ -27,11 +27,6 @@ module.exports = async function authenticateWidget(req, res, next) {
     );
 
     if ((getChat_ID.rows.length === 0) && (!result.rows[0].persistent)) {
-      // getChat_ID = await pool.query(
-      //   'INSERT INTO chats (chat_bot_id, ip_address) VALUES ($1, $2) RETURNING chat_id',
-      //   [result.rows[0].chat_bot_id, ip]
-      // );
-
       req.chatBot = {
       chatBot_id: result.rows[0].chat_bot_id,
       persistent: result.rows[0].persistent,
