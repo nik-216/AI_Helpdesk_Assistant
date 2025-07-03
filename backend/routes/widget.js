@@ -3,6 +3,8 @@ const express = require('express');
 const router = express.Router();
 
 const { pool } = require('../database/postgres_db');
+const { chroma_client } = require('../database/chroma_db')
+
 const authenticateWidget = require('../middlewares/WidgetAuth');
 
 const path = require('path');
@@ -11,29 +13,25 @@ const { pipeline } = require('@xenova/transformers');
 
 // Generate embeddings using HuggingFace Transformers
 let embedder;
-async function generateEmbeddings(chunks) {
+async function generateEmbedding(chunk) {
   try {
     if (!embedder) {
       embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
     }
-    
-    const embeddings = await Promise.all(
-      chunks.map(chunk => embedder(chunk, { pooling: 'mean', normalize: true }))
-    );
-    
-    return chunks.map((chunk, index) => ({
-      chunk,
-      embedding: Array.from(embeddings[index].data)
-    }));
+
+    const result = await embedder(chunk, { pooling: 'mean', normalize: true });
+
+    return Array.from(result.data);
   } catch (error) {
     console.error('HuggingFace embedding error:', error);
-    throw new Error('Failed to generate embeddings');
+    throw new Error('Failed to generate embedding');
   }
 }
 
+
 // Python script for searching similar embeddings
 async function searchSimilar(query, chatBot_id, top_k = 10) {
-  const embedding = await generateEmbeddings([query]);
+  const embedding = await generateEmbedding(query);
   const options = {
     mode: 'text',
     pythonOptions: ['-u'],
@@ -43,6 +41,24 @@ async function searchSimilar(query, chatBot_id, top_k = 10) {
 
   const result = await PythonShell.run('searchSimilar.py', options);
   return result;
+}
+
+async function searchSimilarChroma(query, chatBot_id, top_k = 10) {
+  const collection = await chroma_client.getCollection({name: 'knowledge_embeddings'});
+  const embedding = await generateEmbedding(query);
+  
+  try {
+    const results = await collection.query({
+      queryEmbeddings: [embedding],
+      nResults: top_k,
+      where: { chatbotId: chatBot_id }
+    })
+    // console.log(results.documents);
+    return results.documents[0] || [];
+  } catch (error) {
+    console.error('Similar Search Error:', error);
+    throw new Error('Failed to search similar embeddings');
+  }
 }
 
 // Python script to get reply from AI model
@@ -93,7 +109,7 @@ router.post('/chat', authenticateWidget, async (req, res) => {
       [chatBot_id]
     );
 
-    const similarText = await searchSimilar(messages[messages.length - 1].content, chatBot_id);
+    const similarText = await searchSimilarChroma(messages[messages.length - 1].content, chatBot_id);
     // console.log('Similar items found:', similarText);
     // console.log('Length of similar items:', similarText.length);
 

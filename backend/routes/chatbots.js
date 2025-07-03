@@ -1,9 +1,13 @@
 // routes/chatbots.js
 const express = require('express');
 const router = express.Router();
+
 const { pool } = require('../database/postgres_db');
+const { chroma_client } = require('../database/chroma_db');
+
 const authenticateToken = require('../middlewares/auth');
 const { generateUniqueApiKey } = require('../utils/apiKeyGenerator');
+const { where } = require('sequelize');
 
 // Get all chatbots for a user
 router.get('/', authenticateToken, async (req, res) => {
@@ -123,10 +127,15 @@ router.delete('/:chatbotId/knowledge/delete', authenticateToken, async (req, res
   try {
     const { chatbotId } = req.params;
     const { file_id } = req.body;
+
     const result = await pool.query(
       'DELETE FROM uploaded_data WHERE chat_bot_id = $1 AND file_id = $2 RETURNING *',
       [chatbotId, file_id]
     );
+
+    const collection = await chroma_client.getCollection({name: 'knowledge_embeddings'});
+    await collection.delete({ where: {"fileId": file_id}});
+
     res.json(result.rows);
   } catch (err) {
     console.error(err);

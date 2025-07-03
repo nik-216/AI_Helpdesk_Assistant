@@ -170,9 +170,10 @@ async function storeEmbeddings(userId, source, chunks, embeddings, chatbotId) {
 }
 
 async function storeEmbeddingsChroma(userId, source, chunks, embeddings, chatbotId) {
-  const collection = await chroma_client.getOrCreateCollection('knowledge_embeddings');
+  const collection = await chroma_client.getCollection({name: 'knowledge_embeddings'});
   try {
 
+    const client = await pool.connect();
     const result = await client.query(
         `INSERT INTO uploaded_data (user_id, chat_bot_id, source, created_at)
          VALUES ($1, $2, $3, NOW()) RETURNING *`,
@@ -181,35 +182,21 @@ async function storeEmbeddingsChroma(userId, source, chunks, embeddings, chatbot
 
     const fileId = result.rows[0].file_id;
 
-    // const metadata = chunks.map((chunk, index) => ({
-    //   user_id: userId,
-    //   chat_bot_id: chatbotId,
-    //   source: source,
-    //   chunk: chunk,
-    //   embedding: embeddings[index].embedding
-    // }));
-
     const documents = {
       ids: chunks.map((_, index) => (`${userId}-${chatbotId}-${fileId}-${index}`)),
-      documents: chunks,
-      metadatas: {
+      documents: embeddings.map(e => e.chunk),
+      metadatas: chunks.map(() =>({
         fileId: fileId,
         chatbotId: chatbotId
-      },
-      embeddings: embeddings
-    }
+      })),
+      embeddings: embeddings.map(e => e.embedding)
+    };
 
-    await collection.add(documents)
+    await collection.add(documents);
 
-    // await collection.add({
-    //   ids: metadata.map((_, index) => `${userId}-${chatbotId}-${index}`),
-    //   documents: metadata.map(m => m.chunk),
-    //   embeddings: metadata.map(m => m.embedding),
-    //   metadatas: metadata
-    // });
   } catch (err) {
     console.error('Error storing embeddings in ChromaDB:', err);
-    throw err; // Re-throw to handle in the route handler
+    throw err;
   }
 }
 
@@ -227,7 +214,7 @@ router.post('/file', authenticate, upload.single('file'), async (req, res) => {
     // const relevantText = await extractRelevantText(text);
     const chunks = await chunkText(text);
     const embeddings = await generateEmbeddings(chunks);
-    await storeEmbeddings(req.user.user_id, req.file.originalname, chunks, embeddings, chatbotId);
+    await storeEmbeddingsChroma(req.user.user_id, req.file.originalname, chunks, embeddings, chatbotId);
 
     // Clean up uploaded file
     fs.unlinkSync(req.file.path);
@@ -261,7 +248,7 @@ router.post('/url', authenticate, async (req, res) => {
     const chunks = await chunkText(text);
     const embeddings = await generateEmbeddings(chunks);
     
-    await storeEmbeddings(req.user.user_id, url, chunks, embeddings, chatbotId);
+    await storeEmbeddingsChroma(req.user.user_id, url, chunks, embeddings, chatbotId);
     
     res.json({ success: true, chunks: chunks.length });
   } catch (error) {

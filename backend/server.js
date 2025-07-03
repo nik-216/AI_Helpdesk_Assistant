@@ -51,7 +51,7 @@ async function initializeDatabase() {
   const client = await pool.connect();
   try {
     // Create vector extension if not exists
-    await client.query('CREATE EXTENSION IF NOT EXISTS vector');
+    // await client.query('CREATE EXTENSION IF NOT EXISTS vector');
 
     // Create tables in the correct order to handle foreign key dependencies
     await client.query(`
@@ -102,16 +102,16 @@ async function initializeDatabase() {
       );
     `);
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS knowledge_embeddings (
-        kb_id SERIAL PRIMARY KEY,
-        file_id INTEGER,
-        chunk TEXT,
-        embedding vector(384),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (file_id) REFERENCES uploaded_data(file_id) ON DELETE CASCADE
-      );
-    `);
+    // await client.query(`
+    //   CREATE TABLE IF NOT EXISTS knowledge_embeddings (
+    //     kb_id SERIAL PRIMARY KEY,
+    //     file_id INTEGER,
+    //     chunk TEXT,
+    //     embedding vector(384),
+    //     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    //     FOREIGN KEY (file_id) REFERENCES uploaded_data(file_id) ON DELETE CASCADE
+    //   );
+    // `);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS chat_history (
@@ -124,28 +124,38 @@ async function initializeDatabase() {
       );
     `);
 
-    await client.query(`
-      CREATE INDEX 
-      ON knowledge_embeddings 
-      USING ivfflat (embedding vector_cosine_ops) 
-      WITH (lists = 100);
-    `);
+    // await client.query(`
+    //   CREATE INDEX 
+    //   ON knowledge_embeddings 
+    //   USING ivfflat (embedding vector_cosine_ops) 
+    //   WITH (lists = 100);
+    // `);
 
-    // ChromaDB collection initialization with existence check
+    // ChromaDB collection initialization
     try {
-      const collections = await chroma_client.listCollections();
-      const collectionExists = collections.some(c => c.name === 'knowledge_embeddings');
-      if (!collectionExists) {
-        await chroma_client.getOrCreateCollection({
-          name: 'knowledge_embeddings',
-          metadata: {
-            description: 'Knowledge embeddings for AI chatbots'
-          }
-        });
-        console.log('✅ ChromaDB collection created');
-      } else {
-        console.log('ℹ️ ChromaDB collection already exists');
-      }
+      // const collections = await chroma_client.listCollections();
+      // const collectionExists = collections.some(c => c.name === 'knowledge_embeddings');
+      // if (!collectionExists) {
+      //   await chroma_client.getOrCreateCollection({
+      //     name: 'knowledge_embeddings',
+      //     metadata: {
+      //       description: 'Knowledge embeddings for AI chatbots'
+      //     },
+      //     // embeddingFunction: null
+      //   });
+      //   console.log('✅ ChromaDB collection created');
+      // } else {
+      //   console.log('ℹ️ ChromaDB collection already exists');
+      // }
+
+      await chroma_client.getOrCreateCollection({
+        name: 'knowledge_embeddings',
+        metadata: {
+          description: 'Knowledge embeddings for AI chatbots'
+        },
+        // embeddingFunction: null
+      });
+      console.log('✅ ChromaDB collection created');
     } catch (err) {
       console.error('❌ ChromaDB initialization error:', err);
       throw err;

@@ -27,3 +27,9 @@ yarn-error.log*
 /backend/.env.development.local
 /backend/.env.test.local
 /backend/.env.production.local
+
+/widgetComponent/.env
+/widgetComponent/.env.local
+/widgetComponent/.env.development.local
+/widgetComponent/.env.test.local
+/widgetComponent/.env.production.local

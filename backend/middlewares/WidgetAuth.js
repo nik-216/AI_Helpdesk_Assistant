@@ -26,7 +26,7 @@ module.exports = async function authenticateWidget(req, res, next) {
       [result.rows[0].chat_bot_id, ip]
     );
 
-    if ((getChat_ID.rows.length === 0) && (!result.rows[0].persistent)) {
+    if ((getChat_ID.rows.length === 0) || (!result.rows[0].persistent)) {
       req.chatBot = {
       chatBot_id: result.rows[0].chat_bot_id,
       persistent: result.rows[0].persistent,
