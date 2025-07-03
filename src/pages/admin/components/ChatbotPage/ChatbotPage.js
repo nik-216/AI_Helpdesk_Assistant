@@ -76,16 +76,18 @@ const ChatbotPage = ({ selectedChatbot}) => {
         setMessage('Processing document...');
 
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('chatbotId', selectedChatbot.chat_bot_id);
             
             const token = localStorage.getItem('token');
-            const response = await axios.post(`http://localhost:8080/api/upload/file`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-                'Authorization': `Bearer ${token}`
-            }
+            const response = await axios.post(`http://localhost:8080/api/upload/file`, 
+                {
+                    file: file,
+                    chatbotId: selectedChatbot.chat_bot_id
+                }, 
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': `Bearer ${token}`
+                    }
             });
             
             setMessage(`Document processed successfully! ${response.data.chunks} chunks created.`);

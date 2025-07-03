@@ -1,11 +1,13 @@
 const express = require('express');
 const cors = require('cors');
+
 const { pool } = require('./database/postgres_db');
+const { chroma_client } = require('./database/chroma_db')
+
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
 const chatbotRoutes = require('./routes/chatbots'); 
 const widgetRoutes = require('./routes/widget');
-const multer = require('multer');
 
 const app = express();
 
@@ -128,6 +130,26 @@ async function initializeDatabase() {
       USING ivfflat (embedding vector_cosine_ops) 
       WITH (lists = 100);
     `);
+
+    // ChromaDB collection initialization with existence check
+    try {
+      const collections = await chroma_client.listCollections();
+      const collectionExists = collections.some(c => c.name === 'knowledge_embeddings');
+      if (!collectionExists) {
+        await chroma_client.getOrCreateCollection({
+          name: 'knowledge_embeddings',
+          metadata: {
+            description: 'Knowledge embeddings for AI chatbots'
+          }
+        });
+        console.log('✅ ChromaDB collection created');
+      } else {
+        console.log('ℹ️ ChromaDB collection already exists');
+      }
+    } catch (err) {
+      console.error('❌ ChromaDB initialization error:', err);
+      throw err;
+    }
 
     console.log('✅ Database tables initialized');
   } catch (err) {

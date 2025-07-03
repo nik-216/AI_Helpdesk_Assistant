@@ -32,13 +32,13 @@ async function generateEmbeddings(chunks) {
 }
 
 // Python script for searching similar embeddings
-async function searchSimilar(query, top_k = 10) {
+async function searchSimilar(query, chatBot_id, top_k = 10) {
   const embedding = await generateEmbeddings([query]);
   const options = {
     mode: 'text',
     pythonOptions: ['-u'],
     scriptPath: path.join(__dirname, '../python_scripts'),
-    args: [JSON.stringify(embedding), top_k]
+    args: [JSON.stringify(embedding), top_k, chatBot_id]
   };
 
   const result = await PythonShell.run('searchSimilar.py', options);
@@ -93,7 +93,7 @@ router.post('/chat', authenticateWidget, async (req, res) => {
       [chatBot_id]
     );
 
-    const similarText = await searchSimilar(messages[messages.length - 1].content);
+    const similarText = await searchSimilar(messages[messages.length - 1].content, chatBot_id);
     // console.log('Similar items found:', similarText);
     // console.log('Length of similar items:', similarText.length);
 

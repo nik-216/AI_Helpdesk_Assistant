@@ -8,6 +8,8 @@ const mammoth = require('mammoth');
 const { PythonShell } = require('python-shell');
 
 const { pool } = require('../database/postgres_db');
+const { chroma_client } = require('../database/chroma_db');
+
 const authenticate = require('../middlewares/auth');
 const { pipeline } = require('@xenova/transformers');
 
@@ -164,6 +166,50 @@ async function storeEmbeddings(userId, source, chunks, embeddings, chatbotId) {
     throw err; // Re-throw to handle in the route handler
   } finally {
     client.release();
+  }
+}
+
+async function storeEmbeddingsChroma(userId, source, chunks, embeddings, chatbotId) {
+  const collection = await chroma_client.getOrCreateCollection('knowledge_embeddings');
+  try {
+
+    const result = await client.query(
+        `INSERT INTO uploaded_data (user_id, chat_bot_id, source, created_at)
+         VALUES ($1, $2, $3, NOW()) RETURNING *`,
+        [userId, chatbotId, source]
+      );
+
+    const fileId = result.rows[0].file_id;
+
+    // const metadata = chunks.map((chunk, index) => ({
+    //   user_id: userId,
+    //   chat_bot_id: chatbotId,
+    //   source: source,
+    //   chunk: chunk,
+    //   embedding: embeddings[index].embedding
+    // }));
+
+    const documents = {
+      ids: chunks.map((_, index) => (`${userId}-${chatbotId}-${fileId}-${index}`)),
+      documents: chunks,
+      metadatas: {
+        fileId: fileId,
+        chatbotId: chatbotId
+      },
+      embeddings: embeddings
+    }
+
+    await collection.add(documents)
+
+    // await collection.add({
+    //   ids: metadata.map((_, index) => `${userId}-${chatbotId}-${index}`),
+    //   documents: metadata.map(m => m.chunk),
+    //   embeddings: metadata.map(m => m.embedding),
+    //   metadatas: metadata
+    // });
+  } catch (err) {
+    console.error('Error storing embeddings in ChromaDB:', err);
+    throw err; // Re-throw to handle in the route handler
   }
 }
 

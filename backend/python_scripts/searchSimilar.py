@@ -19,6 +19,7 @@ cur = conn.cursor()
 
 query = sys.argv[1]
 top_k = sys.argv[2]
+chatbot_id = sys.argv[3]
 
 EMBEDDING_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
 
@@ -30,9 +31,10 @@ try:
     cur.execute("""
         SELECT chunk, 1 - (embedding <=> %s::vector) AS cosine_similarity
         FROM knowledge_embeddings
+        WHERE file_id in (SELECT file_id FROM uploaded_data WHERE chat_bot_id = %s)
         ORDER BY embedding <=> %s::vector
         LIMIT %s
-    """, (vec_str, vec_str, top_k))
+    """, (vec_str, chatbot_id, vec_str, top_k))
 
     results = cur.fetchall()
     for chunk, score in results:
