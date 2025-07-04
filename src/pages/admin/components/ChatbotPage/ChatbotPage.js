@@ -14,7 +14,7 @@ const ChatbotPage = ({ selectedChatbot}) => {
     const [settings, setSettings] = useState({
     persistent: false,
     api_key: '',
-    llm_model: 'gpt-3.5-turbo',
+    llm_model: 'deepseek-chat',
     specifications: '',
     rejectionmsg: '',
     temperature: 0.7
@@ -411,10 +411,10 @@ const ChatbotPage = ({ selectedChatbot}) => {
                 onChange={handleSettingsChange}
                 disabled={!isEditing}
                 >
-                <option value="gpt-4o">OpenAI (GPT-4o)</option>
-                <option value="deepseek-chat">DeepSeek Chat</option>
-                <option value="gemini-1.5-flash">Google Gemini 1.5 Flash</option>
-                <option value="gemini-2.0-flash">Google Gemini 2.0 Flash</option>
+                    <option value="deepseek-chat">DeepSeek Chat</option>
+                    <option value="gpt-4o">OpenAI (GPT-4o)</option>
+                    <option value="gemini-1.5-flash">Google Gemini 1.5 Flash</option>
+                    <option value="gemini-2.0-flash">Google Gemini 2.0 Flash</option>
                 </select>
             </div>
 
