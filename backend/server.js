@@ -133,28 +133,28 @@ async function initializeDatabase() {
 
     // ChromaDB collection initialization
     try {
-      // const collections = await chroma_client.listCollections();
-      // const collectionExists = collections.some(c => c.name === 'knowledge_embeddings');
-      // if (!collectionExists) {
-      //   await chroma_client.getOrCreateCollection({
-      //     name: 'knowledge_embeddings',
-      //     metadata: {
-      //       description: 'Knowledge embeddings for AI chatbots'
-      //     },
-      //     // embeddingFunction: null
-      //   });
-      //   console.log('✅ ChromaDB collection created');
-      // } else {
-      //   console.log('ℹ️ ChromaDB collection already exists');
-      // }
+      const collections = await chroma_client.listCollections();
+      const collectionExists = collections.some(c => c.name === 'knowledge_embeddings');
+      if (!collectionExists) {
+        await chroma_client.getOrCreateCollection({
+          name: 'knowledge_embeddings',
+          metadata: {
+            description: 'Knowledge embeddings for AI chatbots'
+          },
+          // embeddingFunction: null
+        });
+        console.log('✅ ChromaDB collection created');
+      } else {
+        console.log('ℹ️ ChromaDB collection already exists');
+      }
 
-      await chroma_client.getOrCreateCollection({
-        name: 'knowledge_embeddings',
-        metadata: {
-          description: 'Knowledge embeddings for AI chatbots'
-        },
+      // await chroma_client.getOrCreateCollection({
+      //   name: 'knowledge_embeddings',
+      //   metadata: {
+      //     description: 'Knowledge embeddings for AI chatbots'
+      //   },
         // embeddingFunction: null
-      });
+      // });
       console.log('✅ ChromaDB collection created');
     } catch (err) {
       console.error('❌ ChromaDB initialization error:', err);
