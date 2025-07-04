@@ -34,4 +34,4 @@ yarn-error.log*
 /widgetComponents/.env.test.local
 /widgetComponents/.env.production.local
 
-backend/database/chroma/
+/backend/database/chroma/
