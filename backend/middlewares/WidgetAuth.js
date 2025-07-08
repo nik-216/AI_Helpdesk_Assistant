@@ -1,4 +1,3 @@
-const { and } = require('sequelize');
 const { pool } = require('../database/postgres_db');
 
 module.exports = async function authenticateWidget(req, res, next) {

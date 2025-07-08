@@ -27,7 +27,7 @@ const Dashboard = ({ setActiveTab, setSelectedChatbot }) => {
         try {
             const token = localStorage.getItem('token');
             await axios.post(
-            'http://localhost:8080/api/chatbots',
+            'http://localhost:8080/api/chatbots/addchatbot',
             { name: newChatbotName },
             {
                 headers: {

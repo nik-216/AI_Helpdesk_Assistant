@@ -25,7 +25,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Create a new chatbot
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/addchatbot', authenticateToken, async (req, res) => {
   try {
     const { name } = req.body;
     const userId = req.user.user_id;
@@ -181,7 +181,7 @@ router.get('/:chatbotId/settings', async (req, res) => {
 });
 
 // Update chatbot settings
-router.put('/:chatbotId/settings', async (req, res) => {
+router.put('/:chatbotId/settings/change', async (req, res) => {
   try {
     const { chatbotId } = req.params;
     const { persistent, api_key, llm_model, specifications, rejection_msg, temperature } = req.body;

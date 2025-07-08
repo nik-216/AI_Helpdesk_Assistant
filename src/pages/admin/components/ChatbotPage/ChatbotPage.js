@@ -147,7 +147,7 @@ const ChatbotPage = ({ selectedChatbot}) => {
         try {
             const token = localStorage.getItem('token');
             await axios.put(
-            `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/settings`,
+            `http://localhost:8080/api/chatbots/${selectedChatbot.chat_bot_id}/settings/change`,
             settings,
             {
                 headers: {
