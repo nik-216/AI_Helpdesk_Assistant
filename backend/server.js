@@ -71,7 +71,7 @@ async function initializeDatabase() {
         name VARCHAR(100),
         persistent BOOLEAN DEFAULT FALSE,
         api_key char(10) UNIQUE,
-        llm_model VARCHAR(100) DEFAULT 'gpt-3.5-turbo',
+        llm_model VARCHAR(100) DEFAULT 'deepseek-chat',
         specifications TEXT DEFAULT '',
         rejection_msg TEXT DEFAULT '',
         temperature FLOAT DEFAULT 0.7,

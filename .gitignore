@@ -35,5 +35,6 @@ yarn-error.log*
 /widgetComponents/.env.production.local
 
 /backend/database/chroma/
+/backend/database/chroma_storage/
 
 /backend/node_modules/
