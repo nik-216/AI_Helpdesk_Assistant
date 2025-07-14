@@ -79,12 +79,7 @@ router.post('/signin', async (req, res) => {
   }
 });
 
-// Protected route example
-router.get('/protected', authenticateToken, (req, res) => {
-  res.json({ message: 'This is protected data', user: req.user });
-});
-
-// Add this to your auth router
+// verifying token
 router.post('/verify', authenticateToken, (req, res) => {
   // If middleware passes, token is valid
   res.json({
