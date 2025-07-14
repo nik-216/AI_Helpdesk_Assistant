@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../pages/auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from './components/Sidebar/Sidebar';
-import Dashboard from './components/Dashboard/Dashboard';
-import ChatbotPage from './components/ChatbotPage/ChatbotPage';
-import { ChatbotProvider } from './components/ChatbotPage/ChatbotContext';
+import Sidebar from '../../components/Sidebar/Sidebar';
+import Dashboard from '../../components/Dashboard/Dashboard';
+import ChatbotPage from '../../components/ChatbotPage/ChatbotPage';
+import { ChatbotProvider } from '../../components/ChatbotPage/ChatbotContext';
 import './Home.css';
 
 const Home = () => {
