@@ -7,7 +7,6 @@ const { chroma_client } = require('../database/chroma_db');
 
 const authenticateToken = require('../middlewares/auth');
 const { generateUniqueApiKey } = require('../utils/apiKeyGenerator');
-const { where } = require('sequelize');
 
 // Get all chatbots for a user
 router.get('/', authenticateToken, async (req, res) => {
