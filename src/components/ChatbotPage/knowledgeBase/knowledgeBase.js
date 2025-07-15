@@ -30,7 +30,7 @@ const KnowledgeBase = ({ selectedChatbot, knowledgeItems, setKnowledgeItems, set
         } catch (error) {
             console.error('Error fetching knowledge items:', error);
         }
-    }, [selectedChatbot]);
+    }, [selectedChatbot, setKnowledgeItems]);
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];

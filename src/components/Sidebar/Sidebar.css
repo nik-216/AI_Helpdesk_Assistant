@@ -5,12 +5,17 @@
     padding: 20px;
     display: flex;
     flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 95.5vh;
+    overflow: hidden;
 }
 
 .user-info {
     margin-bottom: 30px;
     padding-bottom: 10px;
     border-bottom: 1px solid #5e3457;
+    flex-shrink: 0;
 }
 
 .user-name {
@@ -30,12 +35,15 @@
     list-style: none;
     padding: 0;
     margin: 0;
-    overflow-y: auto;
+    /* overflow-y: auto; */
     flex-grow: 1;
+    overflow: hidden;
+    flex-direction: column;
 }
 
 .nav-item {
     margin-bottom: 8px;
+    flex-shrink: 0;
 }
 
 .nav-link {
@@ -56,9 +64,21 @@
     background-color: #34495e;
 }
 
+.chatbots-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin: 10px 0;
+    padding-right: 5px;
+}
+
+.chatbots-container::-webkit-scrollbar {
+    width: 6px;
+}
+
 .signout-container {
     margin-top: auto;
     padding: 20px 0;
+    flex-shrink: 0;
 }
 
 .signout-button {

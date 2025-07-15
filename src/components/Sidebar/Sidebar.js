@@ -16,7 +16,8 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
 
     useEffect(() => {
         fetchChatBots();
-        setInterval(fetchChatBots, 1000)
+        const intervalId = setInterval(fetchChatBots, 10000);
+        return () => clearInterval(intervalId);
     }, [fetchChatBots]);
 
     return (
@@ -47,17 +48,19 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
                 <span className='sectionTitle'>Your Chatbots</span>
             </li>
 
-            {chatBots.map(chatbot => (
-                <li key={chatbot.chat_bot_id} className='nav-item'>
-                <Link 
-                    to="#" 
-                    onClick={() => handleChatbotSelect(chatbot)}
-                    className='nav-link'
-                >
-                    {chatbot.name || `Chatbot ${chatbot.chat_bot_id}`}
-                </Link>
-                </li>
-            ))}
+            <div className="chatbots-container">
+                {chatBots.map(chatbot => (
+                    <li key={chatbot.chat_bot_id} className='nav-item'>
+                        <Link 
+                            to="#" 
+                            onClick={() => handleChatbotSelect(chatbot)}
+                            className='nav-link'
+                        >
+                            {chatbot.name || `Chatbot ${chatbot.chat_bot_id}`}
+                        </Link>
+                    </li>
+                ))}
+            </div>
 
             <hr></hr>
             

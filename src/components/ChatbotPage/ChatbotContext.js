@@ -14,6 +14,7 @@ export const ChatbotProvider = ({ children }) => {
         setError(null);
         try {
             const token = localStorage.getItem('token');
+            if (!token) return;
             const response = await axios.get('http://localhost:8080/api/chatbots', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
