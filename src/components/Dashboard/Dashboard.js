@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import './Dashboard.css';
-import ChatbotContext from '../ChatbotPage/ChatbotContext';
+import './dashboard.css';
+import ChatbotContext from '../chatbotPage/chatbotContext';
 
 const Dashboard = ({ setActiveTab, setSelectedChatbot }) => {
     // const [chatBots, setChatBots] = useState([]);

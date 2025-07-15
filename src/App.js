@@ -1,8 +1,11 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './pages/auth/AuthContext';
-import SignUp from './pages/auth/SignUp';
-import SignIn from './pages/auth/SignIn';
-import Home from './pages/admin/Home';
+
+import { AuthProvider } from './pages/auth/authContext';
+
+import SignUp from './pages/auth/signUp';
+import SignIn from './pages/auth/signIn';
+import Home from './pages/home/home'
+
 import './App.css';
 
 function App() {
@@ -10,10 +13,10 @@ function App() {
     <Router>
       <AuthProvider>
         <Routes>
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/signin" element={<SignIn />} />
           <Route path="/" element={<SignIn />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/home" element={<Home />} />
         </Routes>
       </AuthProvider>
     </Router>

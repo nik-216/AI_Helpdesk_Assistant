@@ -7,7 +7,7 @@ export const ChatbotProvider = ({ children }) => {
     const [chatBots, setChatBots] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    // const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const fetchChatBots = useCallback(async () => {
         setLoading(true);
@@ -24,7 +24,7 @@ export const ChatbotProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, [refreshTrigger]);
+    }, []);
 
     // Initial fetch and when refreshTrigger changes
     useEffect(() => {
@@ -32,15 +32,15 @@ export const ChatbotProvider = ({ children }) => {
     }, [fetchChatBots]);
 
     // Add a refresh function to trigger updates
-    const refreshChatBots = useCallback(() => {
-        setRefreshTrigger(prev => prev + 1);
-    }, []);
+    // const refreshChatBots = useCallback(() => {
+    //     setRefreshTrigger(prev => prev + 1);
+    // }, []);
 
     return (
         <ChatbotContext.Provider value={{ 
             chatBots, 
             fetchChatBots,
-            refreshChatBots,
+            // refreshChatBots,
             loading,
             error
         }}>

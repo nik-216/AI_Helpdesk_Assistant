@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import './ChatbotPage.css';
+import './chatbotPage.css';
 
 const ChatbotPage = ({ selectedChatbot}) => {
     const [activeTab, setActiveTab] = useState('chatbot-chats');
@@ -228,6 +228,27 @@ const ChatbotPage = ({ selectedChatbot}) => {
         setInterval(fetchChats, 10000)
     }, [selectedChatbot, fetchChats]);
 
+    const MarkdownRenderer = ({ content }) => {
+        const renderMarkdown = (text) => {
+            // Handle bold (**text**)
+            let result = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Handle numbered lists (1., 2., etc.)
+            result = result.replace(/^\d+\.\s+(.*$)/gm, '<li>$1</li>');
+            // Handle line breaks
+            result = result.replace(/\n/g, '<br>');
+            // Handle headers (if any)
+            result = result.replace(/^\*\*(.*)\*\*$/gm, '<h4>$1</h4>');
+            return result;
+        };
+
+        return (
+            <div 
+            className="message-text"
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+            />
+        );
+    };
+
     return (
     <div className="chatbot-page">
         <h1 className="chatbot-title">
@@ -313,21 +334,19 @@ const ChatbotPage = ({ selectedChatbot}) => {
                 <div className="chat-history">
                     {selectedChat.history?.length > 0 ? (
                     selectedChat.history.map((message, index) => (
-                        <div 
-                        key={index} 
-                        className={`message ${message.role}`}
-                        >
-                        <div className="message-header">
-                            <span className="message-role">
-                            {message.role === 'user' ? 'User' : 'Assistant'}
-                            </span>
-                            <span className="message-time">
-                            {new Date(message.created_at).toLocaleTimeString()}
-                            </span>
-                        </div>
-                        <div className="message-text">
-                            {message.content}
-                        </div>
+                        <div key={index} className={`message ${message.role}`}>
+                            <div className="message-header">
+                                <span className="message-role">
+                                {message.role === 'user' ? 'User' : 'Assistant'}
+                                </span>
+                                <span className="message-time">
+                                {new Date(message.created_at).toLocaleTimeString()}
+                                </span>
+                            </div>
+                            <div className="message-text">
+                                {/* {message.content} */}
+                                <MarkdownRenderer content={message.content} />
+                            </div>
                         </div>
                     ))
                     ) : (

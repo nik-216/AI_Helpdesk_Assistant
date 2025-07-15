@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useContext } from 'react';
-import './Sidebar.css';
-import ChatbotContext from '../ChatbotPage/ChatbotContext';
+import './sidebar.css';
+import ChatbotContext from '../chatbotPage/chatbotContext';
 
 const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot }) => {
 
