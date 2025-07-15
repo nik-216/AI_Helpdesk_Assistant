@@ -1,22 +1,25 @@
-// routes/chatbots.js
 const express = require('express');
 const router = express.Router();
-
-const { pool } = require('../database/postgres_db');
-const { chroma_client } = require('../database/chroma_db');
-
 const authenticateToken = require('../middlewares/auth');
-const { generateUniqueApiKey } = require('../utils/apiKeyGenerator');
+const { generateUniqueApiKey } = require('../services/apiKeyGenerator');
+const {
+  getUserChatbots,
+  createChatbot,
+  getChatbotById,
+  deleteChatbot,
+  getChatbotChats,
+  getChatHistoryWithDetails,
+  getChatbotKnowledge,
+  deleteKnowledgeItem,
+  getChatbotSettings,
+  updateChatbotSettings
+} = require('../services/chatService');
 
 // Get all chatbots for a user
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.user_id; // Assuming you have authentication middleware
-    const result = await pool.query(
-      'SELECT * FROM chat_bots WHERE user_id = $1 ORDER BY created_at DESC',
-      [userId]
-    );
-    res.json(result.rows);
+    const chatbots = await getUserChatbots(req.user.user_id);
+    res.json(chatbots);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch chatbots' });
@@ -26,16 +29,9 @@ router.get('/', authenticateToken, async (req, res) => {
 // Create a new chatbot
 router.post('/addchatbot', authenticateToken, async (req, res) => {
   try {
-    const { name } = req.body;
-    const userId = req.user.user_id;
     const api_key = await generateUniqueApiKey();
-    
-    const result = await pool.query(
-      'INSERT INTO chat_bots (user_id, name, api_key) VALUES ($1, $2, $3) RETURNING *',
-      [userId, name, api_key]
-    );
-    
-    res.status(201).json(result.rows[0]);
+    const newChatbot = await createChatbot(req.user.user_id, req.body.name, api_key);
+    res.status(201).json(newChatbot);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create chatbot' });
@@ -45,33 +41,22 @@ router.post('/addchatbot', authenticateToken, async (req, res) => {
 // Get a specific chatbot
 router.get('/:chatbotId', authenticateToken, async (req, res) => {
   try {
-    const { chatbotId } = req.params;
-    const result = await pool.query(
-      'SELECT * FROM chat_bots WHERE chat_bot_id = $1',
-      [chatbotId]
-    );
-    
-    if (result.rows.length === 0) {
+    const chatbot = await getChatbotById(req.params.chatbotId);
+    if (!chatbot) {
       return res.status(404).json({ error: 'Chatbot not found' });
     }
-    
-    res.json(result.rows[0]);
+    res.json(chatbot);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch chatbot' });
   }
 });
 
-// delete chatbot
-router.delete('/delete/:chatbotId', authenticateToken, async(req, res)=>{
+// Delete chatbot
+router.delete('/delete/:chatbotId', authenticateToken, async (req, res) => {
   try {
-    const { chatbotId } = req.params
-    const { user_id } = req.user
-
-    await pool.query(
-      'DELETE FROM chat_bots WHERE chat_bot_id = $1 AND user_id = $2',
-      [chatbotId, user_id]
-    );
+    await deleteChatbot(req.params.chatbotId, req.user.user_id);
+    res.json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete chatbot' });
@@ -81,25 +66,13 @@ router.delete('/delete/:chatbotId', authenticateToken, async(req, res)=>{
 // Get chats for a specific chatbot
 router.get('/:chatbotId/chats', authenticateToken, async (req, res) => {
   try {
-    const { chatbotId } = req.params;
-    const result = await pool.query(
-      'SELECT chat_id, created_at FROM chats WHERE chat_bot_id = $1 ORDER BY created_at DESC',
-      [chatbotId]
-    );
-
-    // Return empty array instead of 404 when no chats exist
-    const chats = result.rows;
+    const chats = await getChatbotChats(req.params.chatbotId);
     
     for (let i = 0; i < chats.length; i++) {
-      const chatId = chats[i].chat_id;
-      const chatHistory = await pool.query(
-        'SELECT role, content, created_at FROM chat_history WHERE chat_id = $1 ORDER BY created_at ASC',
-        [chatId]
-      );
-      chats[i].history = chatHistory.rows;
+      chats[i].history = await getChatHistoryWithDetails(chats[i].chat_id);
     }
     
-    res.json(chats); // Will return [] if no chats exist
+    res.json(chats);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch chats' });
@@ -109,12 +82,8 @@ router.get('/:chatbotId/chats', authenticateToken, async (req, res) => {
 // Get knowledge items for a specific chatbot
 router.get('/:chatbotId/knowledge', authenticateToken, async (req, res) => {
   try {
-    const { chatbotId } = req.params;
-    const result = await pool.query(
-      'SELECT file_id, source FROM uploaded_data WHERE chat_bot_id = $1',
-      [chatbotId]
-    );
-    res.json(result.rows);
+    const knowledgeItems = await getChatbotKnowledge(req.params.chatbotId);
+    res.json(knowledgeItems);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch knowledge items' });
@@ -124,18 +93,8 @@ router.get('/:chatbotId/knowledge', authenticateToken, async (req, res) => {
 // Delete knowledge items for a specific chatbot
 router.delete('/:chatbotId/knowledge/delete', authenticateToken, async (req, res) => {
   try {
-    const { chatbotId } = req.params;
-    const { file_id } = req.body;
-
-    const result = await pool.query(
-      'DELETE FROM uploaded_data WHERE chat_bot_id = $1 AND file_id = $2 RETURNING *',
-      [chatbotId, file_id]
-    );
-
-    const collection = await chroma_client.getCollection({name: 'knowledge_embeddings'});
-    await collection.delete({ where: {"fileId": file_id}});
-
-    res.json(result.rows);
+    const deletedItems = await deleteKnowledgeItem(req.params.chatbotId, req.body.file_id);
+    res.json(deletedItems);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete knowledge items' });
@@ -145,12 +104,8 @@ router.delete('/:chatbotId/knowledge/delete', authenticateToken, async (req, res
 // Get chat history for a specific chat
 router.get('/:chatbotId/chats/:chatId/history', authenticateToken, async (req, res) => {
   try {
-    const { chatId } = req.params;
-    const result = await pool.query(
-      'SELECT * FROM chat_history WHERE chat_id = $1 ORDER BY created_at ASC',
-      [chatId]
-    );
-    res.json(result.rows);
+    const history = await getChatHistoryWithDetails(req.params.chatId);
+    res.json(history);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch chat history' });
@@ -160,19 +115,11 @@ router.get('/:chatbotId/chats/:chatId/history', authenticateToken, async (req, r
 // Get chatbot settings
 router.get('/:chatbotId/settings', async (req, res) => {
   try {
-    const { chatbotId } = req.params;
-    const result = await pool.query(
-      `SELECT persistent, api_key, llm_model, specifications, rejection_msg, temperature
-       FROM chat_bots 
-       WHERE chat_bot_id = $1`,
-      [chatbotId]
-    );
-    
-    if (result.rows.length === 0) {
+    const settings = await getChatbotSettings(req.params.chatbotId);
+    if (!settings) {
       return res.status(404).json({ error: 'Chatbot not found' });
     }
-    
-    res.json(result.rows[0]);
+    res.json(settings);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch settings' });
@@ -182,19 +129,7 @@ router.get('/:chatbotId/settings', async (req, res) => {
 // Update chatbot settings
 router.put('/:chatbotId/settings/change', async (req, res) => {
   try {
-    const { chatbotId } = req.params;
-    const { persistent, api_key, llm_model, specifications, rejection_msg, temperature } = req.body;
-
-    await pool.query(
-      `UPDATE chat_bots 
-       SET persistent = $1, api_key = $2, llm_model = $3, 
-           specifications = $4,
-           rejection_msg = $5,
-           temperature = $6
-       WHERE chat_bot_id = $7`,
-      [persistent, api_key, llm_model, specifications, rejection_msg, temperature, chatbotId]
-    );
-    
+    await updateChatbotSettings(req.params.chatbotId, req.body);
     res.json({ message: 'Settings updated successfully' });
   } catch (err) {
     console.error(err);

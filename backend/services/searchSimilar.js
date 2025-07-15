@@ -2,7 +2,7 @@ const path = require('path');
 const { PythonShell } = require('python-shell');
 const { chroma_client } = require('../database/chroma_db');
 
-const { generateEmbedding } = require("./embeddingService")
+const { generateEmbedding } = require("./embedding")
 
 // Python script for searching similar embeddings
 async function searchSimilarPostgreSQL(query, chatBot_id, top_k = 10) {

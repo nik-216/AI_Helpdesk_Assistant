@@ -119,6 +119,7 @@ async function initializeDatabase() {
         chat_id INTEGER,
         role VARCHAR(20) CHECK (role IN ('user', 'assistant', 'system')),
         content TEXT,
+        related_questions TEXT[],
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE
       );

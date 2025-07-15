@@ -78,7 +78,11 @@
           
           // Display previous messages
           history.messages.forEach(msg => {
-            addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot');
+            const messageContent = {
+              text: msg.content,
+              relatedQuestions: msg.related_questions || []
+            };
+            addMessage(messageContent, msg.role === 'user' ? 'user' : 'bot');
           });
         } else {
           // Initial greeting for new users

@@ -4,12 +4,12 @@ const router = express.Router();
 
 const authenticateWidget = require('../middlewares/WidgetAuth');
 
-const { searchSimilarChroma } = require('../services/searchService');
+const { searchSimilarChroma } = require('../services/searchSimilar');
 const { getReply, parseLLMResponse } = require('../services/llmService');
 const {
   createChat,
   saveMessage,
-  getChatBotSettings,
+  getChatBotSettingsWidget,
   getChatHistory,
   clearChatHistory
 } = require('../services/chatService');
@@ -29,7 +29,7 @@ router.post('/chat', authenticateWidget, async (req, res) => {
     
     await saveMessage(currentChatId, 'user', userMessage);
 
-    const { specifications, rejection_msg, temperature } = await getChatBotSettings(chatBot_id);
+    const { specifications, rejection_msg, temperature } = await getChatBotSettingsWidget(chatBot_id);
     const similarText = await searchSimilarChroma(userMessage, chatBot_id);
     
     const replyResult = await getReply(
@@ -42,7 +42,7 @@ router.post('/chat', authenticateWidget, async (req, res) => {
     );
 
     const { reply, relatedQuestions } = parseLLMResponse(replyResult.join('\n'));
-    await saveMessage(currentChatId, 'assistant', reply);
+    await saveMessage(currentChatId, 'assistant', reply, relatedQuestions);
 
     res.json({ 
       reply,

@@ -1,9 +1,9 @@
 const { PythonShell } = require('python-shell');
 const path = require('path');
 
-const { chunkText } = require("./chunkingService")
-const { generateEmbeddings } = require("./embeddingService")
-const { storeEmbeddingsChroma } = require("./storingService")
+const { chunkText } = require("./chunking")
+const { generateEmbeddings } = require("./embedding")
+const { storeEmbeddingsChroma } = require("./storingToDB")
 
 // Scrape the web page
 async function scrapeText(url) {

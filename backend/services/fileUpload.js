@@ -5,9 +5,9 @@ const mammoth = require('mammoth');
 
 const multer = require('multer');
 
-const { chunkText } = require("./chunkingService")
-const { generateEmbeddings } = require("./embeddingService")
-const { storeEmbeddingsChroma } = require("./storingService")
+const { chunkText } = require("./chunking")
+const { generateEmbeddings } = require("./embedding")
+const { storeEmbeddingsChroma } = require("./storingToDB")
 
 
 const upload = multer({ 
