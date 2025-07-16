@@ -168,7 +168,7 @@ const KnowledgeBase = ({ selectedChatbot, knowledgeItems, setKnowledgeItems, set
                                     className="delete-button"
                                     onClick={() => deleteKnowledgeItem(item.file_id)}
                                 >
-                                    Delete
+                                    <img className='delete-icon' src="/icons/trash.png" alt="Delete" height="20" /> 
                                 </button>
                             </div>
                         ))

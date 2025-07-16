@@ -3,7 +3,7 @@ import { useEffect, useContext } from 'react';
 import './sidebar.css';
 import ChatbotContext from '../chatbotPage/chatbotContext';
 
-const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot }) => {
+const Sidebar = ({ user, signout, activeTab, setActiveTab, selectedChatbot, setSelectedChatbot }) => {
 
     // const [chatBots, setChatBots] = useState([]);
     const { chatBots, fetchChatBots } = useContext(ChatbotContext);
@@ -53,8 +53,11 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
                     <li key={chatbot.chat_bot_id} className='nav-item'>
                         <Link 
                             to="#" 
-                            onClick={() => handleChatbotSelect(chatbot)}
-                            className='nav-link'
+                            onClick={() => {
+                                setActiveTab('chatbot');
+                                handleChatbotSelect(chatbot);
+                            }}
+                            className={`nav-link ${activeTab === 'chatbot' && selectedChatbot?.chat_bot_id === chatbot.chat_bot_id ? 'active' : ''}`}
                         >
                             {chatbot.name || `Chatbot ${chatbot.chat_bot_id}`}
                         </Link>
@@ -69,7 +72,7 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, setSelectedChatbot })
 
         <div className="signout-container">
         <button onClick={signout} className="signout-button">
-            {/* <img src="/images/exit.png" alt="Sign Out" height="20" /> */}
+            {/* <img src="/icons/logout.png" alt="Sign Out" height="20" /> */}
             Sign Out
         </button>
         </div>

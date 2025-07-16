@@ -86,6 +86,10 @@ const ChatbotPage = ({ selectedChatbot }) => {
         return () => clearInterval(interval);
     }, [selectedChatbot, fetchChats]);
 
+    const handleDismissNotification = () => {
+        setMessage('');
+    };
+
     return (
         <div className="chatbot-page">
             <h1 className="chatbot-title">
@@ -120,7 +124,12 @@ const ChatbotPage = ({ selectedChatbot }) => {
                 />
             )}
 
-            {message && <Notification message={message} />}
+            {message && (
+                <Notification 
+                    message={message} 
+                    onDismiss={handleDismissNotification} 
+                />
+            )}
         </div>
     );
 };

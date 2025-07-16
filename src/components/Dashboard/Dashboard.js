@@ -97,7 +97,7 @@ const Dashboard = ({ setActiveTab, setSelectedChatbot }) => {
                         className="delete-chatbot-button"
                         onClick={(e) => deleteChatbot(e, chatbot)}
                     >
-                        Delete
+                        <img className='delete-icon' src="/icons/trash.png" alt="Delete" height="20" /> 
                     </button>
                 </div>
                 <p>Created: {new Date(chatbot.created_at).toLocaleString()}</p>

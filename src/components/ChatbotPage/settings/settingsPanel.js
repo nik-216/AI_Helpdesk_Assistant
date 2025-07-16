@@ -36,16 +36,16 @@ const SettingsPanel = ({ settings, setSettings, selectedChatbot, setMessage }) =
         <div>
             <div className="settings-section">
                 <h3>API Key</h3>
-                <div className="api-key-display" >
+                <div className="api-key-display" onClick={() => {
+                        navigator.clipboard.writeText(settings.api_key); 
+                        setMessage("Copied");
+                    }}>
                     <span className="api-key-text">
                         {settings.api_key 
                         ? settings.api_key 
                         : 'No API key configured'}
                     </span>
-                    <img className='copy-icon' src="/icons/copyclipboard.png" alt="copy" height="20" onClick={() => {
-                        navigator.clipboard.writeText(settings.api_key); 
-                        setMessage("Copied");
-                    }}/> 
+                    <img className='copy-icon' src="/icons/copy.png" alt="copy" height="20" /> 
                 </div>
             </div>
             

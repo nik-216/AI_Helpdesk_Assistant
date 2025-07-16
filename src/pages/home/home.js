@@ -32,6 +32,7 @@ const Home = () => {
           signout={signout}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          selectedChatbot={selectedChatbot}
           setSelectedChatbot={setSelectedChatbot}
         />
         
