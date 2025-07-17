@@ -1,70 +1,112 @@
-# Getting Started with Create React App
+# AI Helpdesk Assistant
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The AI Helpdesk Assistant is a modular chatbot system designed to support real-time query handling using domain-specific knowledge bases. This system enables administrators to train custom chatbots using uploaded documents or scraped web content. It supports voice and text interactions through an embeddable widget and is ideal for use cases like interview preparation, customer support, or internal knowledge assistance.
 
-## Available Scripts
+## Table of Contents
 
-In the project directory, you can run:
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture Overview](#architecture-overview)
+- [Use Case: Interview Preparation Chatbot](#use-case-interview-preparation-chatbot)
+- [Current Progress](#current-progress)
+- [Future Enhancements](#future-enhancements)
+- [Setup Instructions](#setup-instructions)
+- [API Endpoints](#api-endpoints)
 
-### `npm start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Features
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- Document and URL ingestion for chatbot training
+- Vector database integration (ChromaDB) for embedding storage
+- Admin panel for chatbot creation, configuration, and monitoring
+- Support for OpenAI, DeepSeek, and Gemini LLMs
+- Real-time voice and text interactions via chat widget
+- Out-of-scope query handling with customizable rejection messages
+- Authentication using JWT and API keys
 
-### `npm test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Tech Stack
 
-### `npm run build`
+**Frontend:**
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- React (Admin Dashboard)
+- HTML/CSS/JavaScript (Embeddable Widget)
+- Web Speech API (Voice Input/Output)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+**Backend:**
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- Node.js
+- Express
+- Python (Chunking, scraping)
 
-### `npm run eject`
+**Database:**
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- PostgreSQL (metadata and chat storage)
+- ChromaDB (vector embeddings)
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+**Authentication:**
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+- JWT (Admin)
+- API Key (Widget)
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+**LLM Providers:**
 
-## Learn More
+- OpenAI API
+- Gemini API
+- DeepSeek API
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+---
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Architecture Overview
 
-### Code Splitting
+1. Admin logs in and creates a chatbot with a unique name.
+2. Admin uploads documents (PDF, DOCX, TXT) or URLs as knowledge sources.
+3. Text is extracted, chunked, embedded using Transformers, and stored in ChromaDB.
+4. Admin customizes bot settings like:
+   - LLM model (Gemini, DeepSeek)
+   - Temperature
+   - Persistent history
+   - Rejection message
+5. Admin embeds the chatbot on any website using a generated API key.
+6. User interacts with the bot via the widget.
+7. Backend retrieves top 10 similar embeddings and sends them with the query to the LLM.
+8. If the query is out-of-scope, a rejection message is returned.
+9. All chat interactions are stored and accessible to the respective admin.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+---
 
-### Analyzing the Bundle Size
+## Use Case: Interview Preparation Chatbot
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+This implementation enables users to conduct mock interviews by interacting with a domain-trained chatbot. Users can:
 
-### Making a Progressive Web App
+- Answer practice questions and get feedback on tone and clarity
+- Explore commonly asked questions for specific job roles
+- Ask follow-up queries to expand their understanding
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+The system ensures queries are answered only if the answer exists in the knowledge base, preserving domain accuracy and relevance.
 
-### Advanced Configuration
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Current Progress
 
-### Deployment
+- React-based admin panel for creating, viewing, and deleting chatbots
+- Document and URL upload support with real-time embedding and storage
+- Chatbot-specific settings management (LLM, temperature, rejection message)
+- API key-based chatbot embedding
+- Widget frontend with voice/text input, voice output, and chat history
+- Backend endpoints for all CRUD operations and chat handling
+- Middleware for JWT authentication and API key validation
+- ChromaDB and PostgreSQL integration for vector and metadata storage
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+---
 
-### `npm run build` fails to minify
+## Setup Instructions
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+1. **Clone the repository**
+
+```bash
+git clone https://github.com/nik-216/AI_Helpdesk_Assistant.git
+cd AI_Helpdesk_Assistant
+```
