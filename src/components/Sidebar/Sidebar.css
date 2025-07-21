@@ -90,10 +90,19 @@
     cursor: pointer;
     width: 100%;
     transition: background-color 0.3s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .signout-button:hover {
     background-color: #b61857;
+}
+
+.signout-button img {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1);
 }
 
 .sectionTitle {

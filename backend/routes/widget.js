@@ -12,7 +12,7 @@ const {
   getChatBotSettingsWidget,
   getChatHistory,
   clearChatHistory
-} = require('../services/chatService');
+} = require('../services/chatBotService');
 
 // Handle chat messages
 router.post('/chat', authenticateWidget, async (req, res) => {

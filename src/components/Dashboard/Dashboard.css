@@ -174,3 +174,62 @@
     right: 20px;
     padding: 12px
 }
+
+/* Notification Styles */
+.notification {
+  position: fixed;
+  bottom: 50px;
+  right: 50px;
+  padding: 12px 24px;
+  color: white;
+  border-radius: 4px;
+  z-index: 1000;
+  /* animation: fadeInOut 5s ease-in-out; */
+  transform: translateY(10px);
+  transition: all 0.3s ease-in-out;
+  opacity: 0;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.notification.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(10px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(10px); }
+}
+
+.user-settings-button {
+    background-color: #2a1b3d;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    position: fixed; /* Makes it stay in place while scrolling */
+    right: 30px;
+    top: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 100; 
+}
+
+.user-settings-button:hover {
+    background-color: #3d2757;
+    transform: scale(1.1);
+}
+
+.user-settings-button img {
+    filter: brightness(0) invert(1);
+    width: 20px;
+    height: 20px;
+}

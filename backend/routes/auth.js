@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const db = require('../database/postgres_db');
 const authenticateToken = require('../middlewares/auth');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const { 
+  userExists, 
+  addUser 
+} = require('../services/authService');
+
+const { createToken } = require('../services/tokenService');
 
 // Signup endpoint
 router.post('/signup', async (req, res) => {
@@ -13,8 +16,8 @@ router.post('/signup', async (req, res) => {
 
   try {
     // Check if user exists
-    const userExists = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (userExists.rows.length > 0) {
+    const exists = await userExists(email);
+    if (exists.rows.length > 0) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
@@ -22,21 +25,10 @@ router.post('/signup', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
-    const newUser = await db.query(
-      'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING user_id, email, name',
-      [name, email, hashedPassword]
-    );
+    const newUser = await addUser(name, email, hashedPassword);
 
     // Create token
-    const token = jwt.sign(
-      {
-        user_id: newUser.rows[0].user_id,
-        email: newUser.rows[0].email,
-        name: newUser.rows[0].name
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
+    const token = await createToken(newUser);
 
     res.status(201).json({ token, user: newUser.rows[0] });
   } catch (err) {
@@ -51,7 +43,7 @@ router.post('/signin', async (req, res) => {
 
   try {
     // Check if user exists
-    const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = await userExists(email);
     if (user.rows.length === 0) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -63,7 +55,7 @@ router.post('/signin', async (req, res) => {
     }
 
     // Create token
-    const token = jwt.sign({ user_id: user.rows[0].user_id, email: user.rows[0].email, name: user.rows[0].name}, JWT_SECRET, { expiresIn: '24h' });
+    const token = await createToken(user);
 
     res.json({ 
       token, 

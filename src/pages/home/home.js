@@ -41,6 +41,7 @@ const Home = () => {
             <Dashboard 
               setActiveTab={setActiveTab}
               setSelectedChatbot={setSelectedChatbot}
+              signout={signout}
             />
           )}
           

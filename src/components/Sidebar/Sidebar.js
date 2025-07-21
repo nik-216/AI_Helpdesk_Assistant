@@ -72,8 +72,8 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, selectedChatbot, setS
 
         <div className="signout-container">
         <button onClick={signout} className="signout-button">
-            {/* <img src="/icons/logout.png" alt="Sign Out" height="20" /> */}
             Sign Out
+            <img src="/icons/logout.png" alt="" height="20" />
         </button>
         </div>
     </div>

@@ -13,7 +13,7 @@ const {
   deleteKnowledgeItem,
   getChatbotSettings,
   updateChatbotSettings
-} = require('../services/chatService');
+} = require('../services/chatBotService');
 
 // Get all chatbots for a user
 router.get('/', authenticateToken, async (req, res) => {

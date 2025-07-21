@@ -4,9 +4,12 @@ import { Link } from 'react-router-dom';
 import './dashboard.css';
 import ChatbotContext from '../chatbotPage/chatbotContext';
 
-const Dashboard = ({ setActiveTab, setSelectedChatbot }) => {
+import UserSettings from './userSettings/userSettings';
+
+const Dashboard = ({ setActiveTab, setSelectedChatbot, signout }) => {
     // const [chatBots, setChatBots] = useState([]);
     const [showNewChatbotModal, setShowNewChatbotModal] = useState(false);
+    const [showUserSettingsModal, setShowUserSettingsModal] = useState(false);
     const [newChatbotName, setNewChatbotName] = useState('');
     const [message, setMessage] = useState('');
     const { chatBots, fetchChatBots, refreshChatBots} = useContext(ChatbotContext);
@@ -71,7 +74,16 @@ const Dashboard = ({ setActiveTab, setSelectedChatbot }) => {
 
     return (
     <div className="dashboard">
-        <h1 className="dashboard-title">Your Chatbots</h1>
+        <div className="dashboard-header">
+            <h1 className="dashboard-title">Your Chatbots</h1>
+            <button 
+                onClick={() => setShowUserSettingsModal(true)}
+                className="user-settings-button"
+            >
+                <img src="/icons/settings.png" alt="Settings" height="20" />
+                {/* <span className="button-tooltip">Settings</span> */}
+            </button>
+        </div>
 
         <div className='edit-chatbot'>
             <Link 
@@ -146,11 +158,18 @@ const Dashboard = ({ setActiveTab, setSelectedChatbot }) => {
         )}
 
         {message && (
-                <div className='notificationsidebar' style={{
-                    backgroundColor: message.includes('failed') ? '#e74c3c' : '#2ecc71'
-                }}>
-                    {message}
-                </div>
+            <div className='notification' style={{
+                backgroundColor: message.includes('failed') ? '#e74c3c' : '#2ecc71'
+            }}>
+                {message}
+            </div>
+        )}
+
+        {showUserSettingsModal && (
+            <UserSettings 
+                onClose={() => setShowUserSettingsModal(false)}
+                signout={signout}
+            />
         )}
 
     </div>
