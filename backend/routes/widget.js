@@ -35,11 +35,12 @@ router.post('/chat', authenticateWidget, async (req, res) => {
     const cachedReply = await getMostSimilarCachedReply(chatBot_id, userMessage);
     // console.log('Cached reply:', cachedReply);
     if (cachedReply) {
-        return res.json({
-            reply: cachedReply.response,
-            messages: [...messages, { role: 'assistant', content: cachedReply.response }],
-            related_questions: cachedReply.related_questions
-        });
+      await saveMessage(currentChatId, 'assistant', cachedReply.response, cachedReply.related_questions);
+      return res.json({
+        reply: cachedReply.response,
+        messages: [...messages, { role: 'assistant', content: cachedReply.response }],
+        related_questions: cachedReply.related_questions
+      });
     }
 
     const { specifications, rejection_msg, temperature } = await getChatBotSettingsWidget(chatBot_id);
