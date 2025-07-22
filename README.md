@@ -9,9 +9,7 @@ The AI Helpdesk Assistant is a modular chatbot system designed to support real-t
 - [Architecture Overview](#architecture-overview)
 - [Use Case: Interview Preparation Chatbot](#use-case-interview-preparation-chatbot)
 - [Current Progress](#current-progress)
-- [Future Enhancements](#future-enhancements)
 - [Setup Instructions](#setup-instructions)
-- [API Endpoints](#api-endpoints)
 
 ---
 
@@ -20,10 +18,11 @@ The AI Helpdesk Assistant is a modular chatbot system designed to support real-t
 - Document and URL ingestion for chatbot training
 - Vector database integration (ChromaDB) for embedding storage
 - Admin panel for chatbot creation, configuration, and monitoring
-- Support for OpenAI, DeepSeek, and Gemini LLMs
+- Support for DeepSeek, Gemini and OpenAI LLMs
 - Real-time voice and text interactions via chat widget
 - Out-of-scope query handling with customizable rejection messages
 - Authentication using JWT and API keys
+- Redis-based caching for recent LLM requests to optimize latency and reduce redundant calls
 
 ---
 
@@ -45,6 +44,7 @@ The AI Helpdesk Assistant is a modular chatbot system designed to support real-t
 
 - PostgreSQL (metadata and chat storage)
 - ChromaDB (vector embeddings)
+- Redis (cache for recent LLM queries)
 
 **Authentication:**
 
@@ -53,9 +53,9 @@ The AI Helpdesk Assistant is a modular chatbot system designed to support real-t
 
 **LLM Providers:**
 
-- OpenAI API
-- Gemini API
 - DeepSeek API
+- Gemini API
+- OpenAI API
 
 ---
 
@@ -74,6 +74,9 @@ The AI Helpdesk Assistant is a modular chatbot system designed to support real-t
 7. Backend retrieves top 10 similar embeddings and sends them with the query to the LLM.
 8. If the query is out-of-scope, a rejection message is returned.
 9. All chat interactions are stored and accessible to the respective admin.
+10. Redis checks if a similar LLM query has been processed recently:
+   - If cached, the cached response is returned.
+   - If not cached, the LLM is queried and the response is stored in Redis.
 
 ---
 
@@ -99,6 +102,7 @@ The system ensures queries are answered only if the answer exists in the knowled
 - Backend endpoints for all CRUD operations and chat handling
 - Middleware for JWT authentication and API key validation
 - ChromaDB and PostgreSQL integration for vector and metadata storage
+- Redis cache integrated for improved response times and LLM efficiency
 
 ---
 
@@ -109,4 +113,20 @@ The system ensures queries are answered only if the answer exists in the knowled
 ```bash
 git clone https://github.com/nik-216/AI_Helpdesk_Assistant.git
 cd AI_Helpdesk_Assistant
+```
+2. Install dependencies (Node.js, Python)
+```bash
+npm install
+pip install python-dotenv openai requests beautifulsoup4
+
+```
+3. Start PostgreSQL, Redis and Chroma servers
+```bash
+brew services start postgresql
+chroma run --path ./chroma_storage
+redis-server
+```
+4. Run backend and frontend servers
+```bash
+npm start
 ```

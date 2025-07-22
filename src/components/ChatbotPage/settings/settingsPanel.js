@@ -75,9 +75,9 @@ const SettingsPanel = ({ settings, setSettings, selectedChatbot, setMessage }) =
                             disabled={!isEditing}
                         >
                             <option value="deepseek-chat">DeepSeek Chat</option>
-                            <option value="gpt-4o">OpenAI (GPT-4o)</option>
                             <option value="gemini-1.5-flash">Google Gemini 1.5 Flash</option>
                             <option value="gemini-2.0-flash">Google Gemini 2.0 Flash</option>
+                            <option value="gpt-4o">OpenAI (GPT-4o)</option>
                         </select>
                     </div>
 
