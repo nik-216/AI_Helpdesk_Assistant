@@ -1,4 +1,4 @@
-import { ChromaClient } from 'chromadb';
+const { ChromaClient } = require('chromadb');
 
 const chroma_client = new ChromaClient({
     persistDirectory: './chroma_storage'
@@ -6,4 +6,6 @@ const chroma_client = new ChromaClient({
 
 // chroma_client.deleteCollection({ name: 'knowledge_embeddings' });
 
-export { chroma_client };
+module.exports = { 
+    chroma_client 
+};

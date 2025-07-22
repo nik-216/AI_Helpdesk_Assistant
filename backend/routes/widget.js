@@ -14,6 +14,8 @@ const {
   clearChatHistory
 } = require('../services/chatBotService');
 
+const { cacheReply, getMostSimilarCachedReply } = require('../services/cacheService');
+
 // Handle chat messages
 router.post('/chat', authenticateWidget, async (req, res) => {
   try {
@@ -28,6 +30,17 @@ router.post('/chat', authenticateWidget, async (req, res) => {
     const userMessage = messages[messages.length - 1].content;
     
     await saveMessage(currentChatId, 'user', userMessage);
+
+    // Check cache for replies
+    const cachedReply = await getMostSimilarCachedReply(chatBot_id, userMessage);
+    console.log('Cached reply:', cachedReply);
+    if (cachedReply) {
+        return res.json({
+            reply: cachedReply.response,
+            messages: [...messages, { role: 'assistant', content: cachedReply.response }],
+            related_questions: cachedReply.related_questions
+        });
+    }
 
     const { specifications, rejection_msg, temperature } = await getChatBotSettingsWidget(chatBot_id);
     const similarText = await searchSimilarChroma(userMessage, chatBot_id);
@@ -44,11 +57,15 @@ router.post('/chat', authenticateWidget, async (req, res) => {
     const { reply, relatedQuestions } = parseLLMResponse(replyResult.join('\n'));
     await saveMessage(currentChatId, 'assistant', reply, relatedQuestions);
 
+    // Cache the reply
+    await cacheReply(userMessage, { reply: reply, related_questions: relatedQuestions }, chatBot_id);
+
     res.json({ 
       reply,
       messages: [...messages, { role: 'assistant', content: reply }],
       related_questions: relatedQuestions
     });
+
   } catch (err) {
     console.error('Widget chat error:', err);
     res.status(500).json({ error: 'Chat processing failed' });

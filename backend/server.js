@@ -3,6 +3,7 @@ const cors = require('cors');
 
 const { pool } = require('./database/postgres_db');
 const { chroma_client } = require('./database/chroma_db')
+const { redisClient } = require('./database/redis');
 
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
@@ -16,7 +17,8 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://127.0.0.1:3001',
-  'http://127.0.0.1:3003',
+  'http://127.0.0.1:5500',
+
   'https://yourproductiondomain.com'
 ];
 
@@ -134,6 +136,8 @@ async function initializeDatabase() {
     //   WITH (lists = 100);
     // `);
 
+    console.log('✅ PostgreSQL tables initialized');
+
     // ChromaDB collection initialization
     try {
       const collections = await chroma_client.listCollections();
@@ -163,6 +167,11 @@ async function initializeDatabase() {
       console.error('❌ ChromaDB initialization error:', err);
       throw err;
     }
+
+    // redisClient.on('error', err => console.log('Redis Client Error', err));
+
+    // redisClient.connect();
+    // console.log('✅ Redis connected successfully');
 
     console.log('✅ Database tables initialized');
   } catch (err) {
