@@ -33,7 +33,7 @@ router.post('/chat', authenticateWidget, async (req, res) => {
 
     // Check cache for replies
     const cachedReply = await getMostSimilarCachedReply(chatBot_id, userMessage);
-    console.log('Cached reply:', cachedReply);
+    // console.log('Cached reply:', cachedReply);
     if (cachedReply) {
         return res.json({
             reply: cachedReply.response,
