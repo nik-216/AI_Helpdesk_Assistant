@@ -38,3 +38,4 @@ yarn-error.log*
 /backend/database/chroma_storage/
 
 /backend/node_modules/
+/backend/database/dump.rdb
