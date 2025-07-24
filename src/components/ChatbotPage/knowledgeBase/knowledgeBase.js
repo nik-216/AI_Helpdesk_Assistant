@@ -4,6 +4,8 @@ import axios from 'axios';
 import UploadModal from './uploadModal';
 import LinkModal from './linkModal';
 
+import trashIcon from '../../../assets/icons/trash.png';
+
 const KnowledgeBase = ({ selectedChatbot, knowledgeItems, setKnowledgeItems, setMessage }) => {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showLinkModal, setShowLinkModal] = useState(false);
@@ -168,7 +170,7 @@ const KnowledgeBase = ({ selectedChatbot, knowledgeItems, setKnowledgeItems, set
                                     className="delete-button"
                                     onClick={() => deleteKnowledgeItem(item.file_id)}
                                 >
-                                    <img className='delete-icon' src="/icons/trash.png" alt="Delete" height="20" /> 
+                                    <img className='delete-icon' src={trashIcon} alt="Delete" height="20" /> 
                                 </button>
                             </div>
                         ))

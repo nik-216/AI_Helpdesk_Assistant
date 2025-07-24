@@ -3,6 +3,8 @@ import { useEffect, useContext } from 'react';
 import './sidebar.css';
 import ChatbotContext from '../chatbotPage/chatbotContext';
 
+import logoutIcon from '../../assets/icons/logout.png';
+
 const Sidebar = ({ user, signout, activeTab, setActiveTab, selectedChatbot, setSelectedChatbot }) => {
 
     // const [chatBots, setChatBots] = useState([]);
@@ -73,7 +75,7 @@ const Sidebar = ({ user, signout, activeTab, setActiveTab, selectedChatbot, setS
         <div className="signout-container">
         <button onClick={signout} className="signout-button">
             Sign Out
-            <img src="/icons/logout.png" alt="" height="20" />
+            <img className='logout-icon' src={logoutIcon} alt="" height="20" />
         </button>
         </div>
     </div>

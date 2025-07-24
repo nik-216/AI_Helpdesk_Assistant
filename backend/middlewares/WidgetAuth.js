@@ -25,11 +25,17 @@ module.exports = async function authenticateWidget(req, res, next) {
       [result.rows[0].chat_bot_id, ip]
     );
 
-    if ((getChat_ID.rows.length === 0) || (!result.rows[0].persistent)) {
+    // If no chat exists, create a new one
+    if (getChat_ID.rows.length === 0) {
+      const newChat = await pool.query(
+        'INSERT INTO chats (chat_bot_id, ip_address) VALUES ($1, $2) RETURNING chat_id',
+        [result.rows[0].chat_bot_id, ip]
+      );
       req.chatBot = {
-      chatBot_id: result.rows[0].chat_bot_id,
-      persistent: result.rows[0].persistent,
-      llm_model: result.rows[0].llm_model
+        chatBot_id: result.rows[0].chat_bot_id,
+        persistent: result.rows[0].persistent,
+        llm_model: result.rows[0].llm_model,
+        chat_id: newChat.rows[0].chat_id
       };
       next();
     }

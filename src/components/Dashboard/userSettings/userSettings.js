@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import './userSettings.css';
 
+import trashIcon from '../../../assets/icons/userTrash.png';
+
 const UserSettings = ({ onClose, signout }) => {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -122,7 +124,7 @@ const UserSettings = ({ onClose, signout }) => {
                                 className='delete-account-button'
                                 aria-label="Delete account"
                             >
-                                <img className='delete-account-icon' src="/icons/userTrash.png" alt="" height="20" />
+                                <img className='delete-account-icon' src={trashIcon} alt="" height="20" />
                                 <span className='delete-account-tooltip'>Delete Account</span>
                             </button>
                         </div>

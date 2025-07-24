@@ -6,6 +6,9 @@ import ChatbotContext from '../chatbotPage/chatbotContext';
 
 import UserSettings from './userSettings/userSettings';
 
+import settingsIcon from '../../assets/icons/settings.png';
+import trashIcon from '../../assets/icons/trash.png';
+
 const Dashboard = ({ setActiveTab, setSelectedChatbot, signout }) => {
     // const [chatBots, setChatBots] = useState([]);
     const [showNewChatbotModal, setShowNewChatbotModal] = useState(false);
@@ -80,7 +83,7 @@ const Dashboard = ({ setActiveTab, setSelectedChatbot, signout }) => {
                 onClick={() => setShowUserSettingsModal(true)}
                 className="user-settings-button"
             >
-                <img src="/icons/settings.png" alt="Settings" height="20" />
+                <img className='settings-icon' src={settingsIcon} alt="Settings" height="20" />
                 {/* <span className="button-tooltip">Settings</span> */}
             </button>
         </div>
@@ -109,7 +112,7 @@ const Dashboard = ({ setActiveTab, setSelectedChatbot, signout }) => {
                         className="delete-chatbot-button"
                         onClick={(e) => deleteChatbot(e, chatbot)}
                     >
-                        <img className='delete-icon' src="/icons/trash.png" alt="Delete" height="20" /> 
+                        <img className='delete-icon' src={trashIcon} alt="Delete" height="20" /> 
                     </button>
                 </div>
                 <p>Created: {new Date(chatbot.created_at).toLocaleString()}</p>

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import axios from 'axios';
 
+import copyIcon from '../../../assets/icons/copy.png';
+
 const SettingsPanel = ({ settings, setSettings, selectedChatbot, setMessage }) => {
     const [isEditing, setIsEditing] = useState(false);
 
@@ -45,7 +47,7 @@ const SettingsPanel = ({ settings, setSettings, selectedChatbot, setMessage }) =
                         ? settings.api_key 
                         : 'No API key configured'}
                     </span>
-                    <img className='copy-icon' src="/icons/copy.png" alt="copy" height="20" /> 
+                    <img className='copy-icon' src={copyIcon} alt="copy" height="20" /> 
                 </div>
             </div>
             

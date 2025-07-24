@@ -47,7 +47,7 @@ async function cacheReply(query, response, chatbotId) {
         await redisClient.lTrim(cacheKey, 0, MAX_CACHED_QUERIES - 1);
         await redisClient.expire(cacheKey, 3600);
         
-        console.log(`✅ Cached reply for query: ${query}`);
+        // console.log(`✅ Cached reply for query: ${query}`);
     } catch (error) {
         console.error('❌ Error caching reply:', error);
     }
@@ -102,7 +102,7 @@ async function getMostSimilarCachedReply(chatbotId, currentQuery) {
 
         for (const cached of cachedQueries) {
             const simScore = await similarity(cached.query, currentQuery);
-            console.log(`Similarity between "${cached.query}" and "${currentQuery}": ${simScore}`);
+            // console.log(`Similarity between "${cached.query}" and "${currentQuery}": ${simScore}`);
             if (simScore > highestSimilarity) {
                 highestSimilarity = simScore;
                 mostSimilar = cached;
