@@ -8,7 +8,8 @@ function normalizeQuery(query) {
   return query
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, ' '); 
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s]/g, '');
 }
 
 async function computeCosineSimilarity(vecA, vecB) {
@@ -21,7 +22,7 @@ async function computeCosineSimilarity(vecA, vecB) {
 async function similarity(cachedQuery, newQuery) {
     const cachedEmbedding = await generateEmbedding(cachedQuery);
     const newEmbedding = await generateEmbedding(newQuery);
-    return computeCosineSimilarity(cachedEmbedding, newEmbedding) > 0.8;
+    return computeCosineSimilarity(cachedEmbedding, newEmbedding);
 }
 
 async function cacheReply(query, response, chatbotId) {
@@ -86,34 +87,28 @@ async function getCachedReplies(chatbotId) {
 async function getMostSimilarCachedReply(chatbotId, currentQuery) {
     try {
         const normalizedQuery = normalizeQuery(currentQuery);
-        // First try exact match
-        const exactMatchKey = `chatbot:${chatbotId}:${normalizedQuery}`;
-        const exactMatch = await redisClient.hGetAll(exactMatchKey);
-        
-        if (exactMatch && exactMatch.response) {
-            return {
-                query: exactMatch.query,
-                response: JSON.parse(exactMatch.response),
-                related_questions: JSON.parse(exactMatch.related_questions || '[]')
-            };
-        }
-        
-        // Fall back to similarity check if no exact match
         const cachedQueries = await getCachedReplies(chatbotId);
         if (!cachedQueries) return null;
-        
-        // Find the most similar cached query
+
+        // Check for exact match first
+        const exactMatch = cachedQueries.find(cached => 
+            normalizeQuery(cached.query) === normalizedQuery
+        );
+        if (exactMatch) return exactMatch;
+
+        // Fall back to semantic similarity
         let mostSimilar = null;
         let highestSimilarity = 0;
-        
+
         for (const cached of cachedQueries) {
             const simScore = await similarity(cached.query, currentQuery);
+            console.log(`Similarity between "${cached.query}" and "${currentQuery}": ${simScore}`);
             if (simScore > highestSimilarity) {
                 highestSimilarity = simScore;
                 mostSimilar = cached;
             }
         }
-        
+
         return highestSimilarity > 0.8 ? mostSimilar : null;
     } catch (error) {
         console.error('❌ Error finding similar cached reply:', error);
