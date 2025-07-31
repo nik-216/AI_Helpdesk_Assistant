@@ -10,7 +10,7 @@ async function getReply(model, messages, similarText, specifications, rejection_
     };
 
     const result = await PythonShell.run('getReplyInterview.py', options);
-    console.log(result);
+    // console.log(result);
     return result;
 }
 
